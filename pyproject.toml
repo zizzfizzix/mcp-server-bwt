@@ -20,7 +20,8 @@ classifiers = [
 
 dependencies = [
     "mcp[cli]==1.6.0",
-    "httpx==0.27.1"
+    "httpx==0.27.1",
+    "bing-webmaster-tools==1.1.2"
 ]
 
 [project.optional-dependencies]
@@ -31,16 +32,16 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["mcp-server-bwt"]
+packages = ["mcp_server_bwt"]
 
 [tool.hatch.version]
-path = "mcp-server-bwt/version.py"
+path = "mcp_server_bwt/version.py"
 
 [project.scripts]
-mcp-server-bwt = "mcp-server-bwt.main:app"
+mcp-server-bwt = "mcp_server_bwt.main:app"
 
 [tool.pytest.ini_options]
-pythonpath = "mcp-server-bwt"
+pythonpath = "mcp_server_bwt"
 
 [tool.mypy]
 python_version = "3.12"
