@@ -4,7 +4,7 @@
 
 ## Requirements
 
-- [Python](https://www.python.org)
+- [Python](https://www.python.org) >= 3.13
 - [Nodejs](https://nodejs.org)
 
 ## Usage
