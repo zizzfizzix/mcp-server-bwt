@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from mcp.server.fastmcp import FastMCP
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService, SiteInfo
 
@@ -9,7 +9,10 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
         """List all verified sites in Bing Webmaster Tools.
         
         Returns:
-            List of SiteInfo objects containing site information
+            List[SiteInfo]: List of verified sites with their information
+            
+        Raises:
+            BingWebmasterError: If sites cannot be retrieved
         """
         async with service as s:
             return await s.sites.get_sites()
@@ -22,10 +25,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site to add
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation containing site information
+            
+        Raises:
+            BingWebmasterError: If site cannot be added
         """
         async with service as s:
-            return await s.sites.add_site(site_url)
+            return await s.sites.add_site(site_url=site_url)
     
     @mcp.tool()
     async def verify_site(site_url: str) -> Dict[str, Any]:
@@ -35,10 +41,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site to verify
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the verification operation
+            
+        Raises:
+            BingWebmasterError: If site cannot be verified
         """
         async with service as s:
-            return await s.sites.verify_site(site_url)
+            return await s.sites.verify_site(site_url=site_url)
     
     @mcp.tool()
     async def remove_site(site_url: str) -> Dict[str, Any]:
@@ -48,10 +57,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site to remove
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the removal operation
+            
+        Raises:
+            BingWebmasterError: If site cannot be removed
         """
         async with service as s:
-            return await s.sites.remove_site(site_url)
+            return await s.sites.remove_site(site_url=site_url)
     
     @mcp.tool()
     async def get_site_roles(site_url: str) -> Dict[str, Any]:
@@ -61,10 +73,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the site roles
+            Dict[str, Any]: Site roles information
+            
+        Raises:
+            BingWebmasterError: If site roles cannot be retrieved
         """
         async with service as s:
-            return await s.sites.get_site_roles(site_url)
+            return await s.sites.get_site_roles(site_url=site_url)
     
     @mcp.tool()
     async def add_site_roles(site_url: str, roles: List[str]) -> Dict[str, Any]:
@@ -75,10 +90,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             roles: List of roles to add
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If roles cannot be added
         """
         async with service as s:
-            return await s.sites.add_site_roles(site_url, roles)
+            return await s.sites.add_site_roles(site_url=site_url, roles=roles)
     
     @mcp.tool()
     async def remove_site_role(site_url: str, role: str) -> Dict[str, Any]:
@@ -89,10 +107,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             role: The role to remove
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If role cannot be removed
         """
         async with service as s:
-            return await s.sites.remove_site_role(site_url, role)
+            return await s.sites.remove_site_role(site_url=site_url, role=role)
     
     @mcp.tool()
     async def get_site_moves(site_url: str) -> Dict[str, Any]:
@@ -102,10 +123,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the site moves
+            Dict[str, Any]: Information about site moves
+            
+        Raises:
+            BingWebmasterError: If site moves cannot be retrieved
         """
         async with service as s:
-            return await s.sites.get_site_moves(site_url)
+            return await s.sites.get_site_moves(site_url=site_url)
     
     @mcp.tool()
     async def submit_site_move(site_url: str, new_url: str) -> Dict[str, Any]:
@@ -116,10 +140,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             new_url: The new URL of the site
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the site move submission
+            
+        Raises:
+            BingWebmasterError: If site move cannot be submitted
         """
         async with service as s:
-            return await s.sites.submit_site_move(site_url, new_url)
+            return await s.sites.submit_site_move(site_url=site_url, new_url=new_url)
     
     # Submission Tools
     @mcp.tool()
@@ -130,10 +157,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to submit for indexing
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the URL submission
+            
+        Raises:
+            BingWebmasterError: If URL cannot be submitted
         """
         async with service as s:
-            return await s.submission.submit_url(url)
+            return await s.submission.submit_url(url=url)
     
     @mcp.tool()
     async def submit_urls_batch(urls: List[str]) -> Dict[str, Any]:
@@ -143,10 +173,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             urls: List of URLs to submit for indexing
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the batch URL submission
+            
+        Raises:
+            BingWebmasterError: If URLs cannot be submitted
         """
         async with service as s:
-            return await s.submission.submit_url_batch(urls)
+            return await s.submission.submit_url_batch(urls=urls)
     
     @mcp.tool()
     async def submit_content(url: str, content: str) -> Dict[str, Any]:
@@ -157,10 +190,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             content: The content to submit
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the content submission
+            
+        Raises:
+            BingWebmasterError: If content cannot be submitted
         """
         async with service as s:
-            return await s.submission.submit_content(url, content)
+            return await s.submission.submit_content(url=url, content=content)
     
     @mcp.tool()
     async def submit_feed(site_url: str, feed_url: str) -> Dict[str, Any]:
@@ -171,10 +207,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             feed_url: The URL of the feed
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the feed submission
+            
+        Raises:
+            BingWebmasterError: If feed cannot be submitted
         """
         async with service as s:
-            return await s.submission.submit_feed(site_url, feed_url)
+            return await s.submission.submit_feed(site_url=site_url, feed_url=feed_url)
     
     @mcp.tool()
     async def get_feeds(site_url: str) -> Dict[str, Any]:
@@ -184,10 +223,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the feeds
+            Dict[str, Any]: List of feeds for the site
+            
+        Raises:
+            BingWebmasterError: If feeds cannot be retrieved
         """
         async with service as s:
-            return await s.submission.get_feeds(site_url)
+            return await s.submission.get_feeds(site_url=site_url)
     
     @mcp.tool()
     async def get_feed_details(site_url: str, feed_url: str) -> Dict[str, Any]:
@@ -198,10 +240,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             feed_url: The URL of the feed
             
         Returns:
-            Dict containing the feed details
+            Dict[str, Any]: Feed details
+            
+        Raises:
+            BingWebmasterError: If feed details cannot be retrieved
         """
         async with service as s:
-            return await s.submission.get_feed_details(site_url, feed_url)
+            return await s.submission.get_feed_details(site_url=site_url, feed_url=feed_url)
     
     @mcp.tool()
     async def remove_feed(site_url: str, feed_url: str) -> Dict[str, Any]:
@@ -212,10 +257,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             feed_url: The URL of the feed
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the feed removal
+            
+        Raises:
+            BingWebmasterError: If feed cannot be removed
         """
         async with service as s:
-            return await s.submission.remove_feed(site_url, feed_url)
+            return await s.submission.remove_feed(site_url=site_url, feed_url=feed_url)
     
     @mcp.tool()
     async def get_url_submission_quota(site_url: str) -> Dict[str, Any]:
@@ -225,10 +273,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the URL submission quota
+            Dict[str, Any]: URL submission quota information
+            
+        Raises:
+            BingWebmasterError: If quota cannot be retrieved
         """
         async with service as s:
-            return await s.submission.get_url_submission_quota(site_url)
+            return await s.submission.get_url_submission_quota(site_url=site_url)
     
     @mcp.tool()
     async def get_content_submission_quota(site_url: str) -> Dict[str, Any]:
@@ -238,10 +289,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the content submission quota
+            Dict[str, Any]: Content submission quota information
+            
+        Raises:
+            BingWebmasterError: If quota cannot be retrieved
         """
         async with service as s:
-            return await s.submission.get_content_submission_quota(site_url)
+            return await s.submission.get_content_submission_quota(site_url=site_url)
     
     @mcp.tool()
     async def fetch_url(url: str) -> Dict[str, Any]:
@@ -251,10 +305,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to fetch
             
         Returns:
-            Dict containing the fetch result
+            Dict[str, Any]: Fetch result
+            
+        Raises:
+            BingWebmasterError: If URL cannot be fetched
         """
         async with service as s:
-            return await s.submission.fetch_url(url)
+            return await s.submission.fetch_url(url=url)
     
     @mcp.tool()
     async def get_fetched_urls(site_url: str) -> Dict[str, Any]:
@@ -264,10 +321,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the fetched URLs
+            Dict[str, Any]: List of fetched URLs
+            
+        Raises:
+            BingWebmasterError: If fetched URLs cannot be retrieved
         """
         async with service as s:
-            return await s.submission.get_fetched_urls(site_url)
+            return await s.submission.get_fetched_urls(site_url=site_url)
     
     @mcp.tool()
     async def get_fetched_url_details(site_url: str, url: str) -> Dict[str, Any]:
@@ -278,10 +338,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to get details for
             
         Returns:
-            Dict containing the fetched URL details
+            Dict[str, Any]: Fetched URL details
+            
+        Raises:
+            BingWebmasterError: If URL details cannot be retrieved
         """
         async with service as s:
-            return await s.submission.get_fetched_url_details(site_url, url)
+            return await s.submission.get_fetched_url_details(site_url=site_url, url=url)
     
     # Traffic Analysis Tools
     @mcp.tool()
@@ -294,10 +357,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict containing the query stats
+            Dict[str, Any]: Query statistics data
+            
+        Raises:
+            BingWebmasterError: If query stats cannot be retrieved
         """
         async with service as s:
-            return await s.traffic.get_query_stats(site_url, start_date, end_date)
+            return await s.traffic.get_query_stats(site_url=site_url, start_date=start_date, end_date=end_date)
     
     @mcp.tool()
     async def get_query_traffic_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -309,10 +375,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict containing the query traffic stats
+            Dict[str, Any]: Query traffic statistics data
+            
+        Raises:
+            BingWebmasterError: If query traffic stats cannot be retrieved
         """
         async with service as s:
-            return await s.traffic.get_query_traffic_stats(site_url, start_date, end_date)
+            return await s.traffic.get_query_traffic_stats(site_url=site_url, start_date=start_date, end_date=end_date)
     
     @mcp.tool()
     async def get_query_page_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -324,10 +393,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict containing the query page stats
+            Dict[str, Any]: Query page statistics data
+            
+        Raises:
+            BingWebmasterError: If query page stats cannot be retrieved
         """
         async with service as s:
-            return await s.traffic.get_query_page_stats(site_url, start_date, end_date)
+            return await s.traffic.get_query_page_stats(site_url=site_url, start_date=start_date, end_date=end_date)
     
     @mcp.tool()
     async def get_query_page_detail_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -339,10 +411,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict containing the query page detail stats
+            Dict[str, Any]: Query page detail statistics data
+            
+        Raises:
+            BingWebmasterError: If query page detail stats cannot be retrieved
         """
         async with service as s:
-            return await s.traffic.get_query_page_detail_stats(site_url, start_date, end_date)
+            return await s.traffic.get_query_page_detail_stats(site_url=site_url, start_date=start_date, end_date=end_date)
     
     @mcp.tool()
     async def get_page_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -354,10 +429,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict containing the page stats
+            Dict[str, Any]: Page statistics data
+            
+        Raises:
+            BingWebmasterError: If page stats cannot be retrieved
         """
         async with service as s:
-            return await s.traffic.get_page_stats(site_url, start_date, end_date)
+            return await s.traffic.get_page_stats(site_url=site_url, start_date=start_date, end_date=end_date)
     
     @mcp.tool()
     async def get_page_query_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -369,10 +447,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict containing the page query stats
+            Dict[str, Any]: Page query statistics data
+            
+        Raises:
+            BingWebmasterError: If page query stats cannot be retrieved
         """
         async with service as s:
-            return await s.traffic.get_page_query_stats(site_url, start_date, end_date)
+            return await s.traffic.get_page_query_stats(site_url=site_url, start_date=start_date, end_date=end_date)
     
     @mcp.tool()
     async def get_rank_and_traffic_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -384,10 +465,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict containing the rank and traffic stats
+            Dict[str, Any]: Rank and traffic statistics data
+            
+        Raises:
+            BingWebmasterError: If rank and traffic stats cannot be retrieved
         """
         async with service as s:
-            return await s.traffic.get_rank_and_traffic_stats(site_url, start_date, end_date)
+            return await s.traffic.get_rank_and_traffic_stats(site_url=site_url, start_date=start_date, end_date=end_date)
     
     # Crawling Tools
     @mcp.tool()
@@ -398,10 +482,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the crawl stats
+            Dict[str, Any]: Crawl statistics data
+            
+        Raises:
+            BingWebmasterError: If crawl stats cannot be retrieved
         """
         async with service as s:
-            return await s.crawling.get_crawl_stats(site_url)
+            return await s.crawling.get_crawl_stats(site_url=site_url)
     
     @mcp.tool()
     async def get_crawl_settings(site_url: str) -> Dict[str, Any]:
@@ -411,10 +498,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the crawl settings
+            Dict[str, Any]: Crawl settings data
+            
+        Raises:
+            BingWebmasterError: If crawl settings cannot be retrieved
         """
         async with service as s:
-            return await s.crawling.get_crawl_settings(site_url)
+            return await s.crawling.get_crawl_settings(site_url=site_url)
     
     @mcp.tool()
     async def save_crawl_settings(site_url: str, settings: Dict[str, Any]) -> Dict[str, Any]:
@@ -425,10 +515,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             settings: The crawl settings to save
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If crawl settings cannot be saved
         """
         async with service as s:
-            return await s.crawling.save_crawl_settings(site_url, settings)
+            return await s.crawling.save_crawl_settings(site_url=site_url, settings=settings)
     
     @mcp.tool()
     async def get_crawl_issues(site_url: str) -> Dict[str, Any]:
@@ -438,53 +531,68 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the crawl issues
+            Dict[str, Any]: Crawl issues data
+            
+        Raises:
+            BingWebmasterError: If crawl issues cannot be retrieved
         """
         async with service as s:
-            return await s.crawling.get_crawl_issues(site_url)
+            return await s.crawling.get_crawl_issues(site_url=site_url)
     
     # Keyword Analysis Tools
     @mcp.tool()
-    async def get_keyword(site_url: str, keyword: str) -> Dict[str, Any]:
+    async def get_keyword(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
         """Get keyword data for a site.
         
         Args:
             site_url: The URL of the site
             keyword: The keyword to get data for
+            language: The language code (default: "en")
             
         Returns:
-            Dict containing the keyword data
+            Dict[str, Any]: Keyword data
+            
+        Raises:
+            BingWebmasterError: If keyword data cannot be retrieved
         """
         async with service as s:
-            return await s.keywords.get_keyword(site_url, keyword)
+            return await s.keywords.get_keyword(site_url=site_url, keyword=keyword, language=language)
     
     @mcp.tool()
-    async def get_keyword_stats(site_url: str, keyword: str) -> Dict[str, Any]:
+    async def get_keyword_stats(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
         """Get keyword stats for a site.
         
         Args:
             site_url: The URL of the site
             keyword: The keyword to get stats for
+            language: The language code (default: "en")
             
         Returns:
-            Dict containing the keyword stats
+            Dict[str, Any]: Keyword statistics data
+            
+        Raises:
+            BingWebmasterError: If keyword stats cannot be retrieved
         """
         async with service as s:
-            return await s.keywords.get_keyword_stats(site_url, keyword)
+            return await s.keywords.get_keyword_stats(site_url=site_url, keyword=keyword, language=language)
     
     @mcp.tool()
-    async def get_related_keywords(site_url: str, keyword: str) -> Dict[str, Any]:
+    async def get_related_keywords(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
         """Get related keywords for a site.
         
         Args:
             site_url: The URL of the site
             keyword: The keyword to get related keywords for
+            language: The language code (default: "en")
             
         Returns:
-            Dict containing the related keywords
+            Dict[str, Any]: Related keywords data
+            
+        Raises:
+            BingWebmasterError: If related keywords cannot be retrieved
         """
         async with service as s:
-            return await s.keywords.get_related_keywords(site_url, keyword)
+            return await s.keywords.get_related_keywords(site_url=site_url, keyword=keyword, language=language)
     
     # Link Analysis Tools
     @mcp.tool()
@@ -495,10 +603,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the link counts
+            Dict[str, Any]: Link counts data
+            
+        Raises:
+            BingWebmasterError: If link counts cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_link_counts(site_url)
+            return await s.links.get_link_counts(site_url=site_url)
     
     @mcp.tool()
     async def get_url_links(site_url: str, url: str) -> Dict[str, Any]:
@@ -509,10 +620,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to get links for
             
         Returns:
-            Dict containing the links
+            Dict[str, Any]: URL links data
+            
+        Raises:
+            BingWebmasterError: If URL links cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_url_links(site_url, url)
+            return await s.links.get_url_links(site_url=site_url, url=url)
     
     @mcp.tool()
     async def get_deep_link(site_url: str, url: str) -> Dict[str, Any]:
@@ -523,10 +637,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to get deep link for
             
         Returns:
-            Dict containing the deep link
+            Dict[str, Any]: Deep link data
+            
+        Raises:
+            BingWebmasterError: If deep link cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_deep_link(site_url, url)
+            return await s.links.get_deep_link(site_url=site_url, url=url)
     
     @mcp.tool()
     async def get_deep_link_blocks(site_url: str) -> Dict[str, Any]:
@@ -536,10 +653,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the deep link blocks
+            Dict[str, Any]: Deep link blocks data
+            
+        Raises:
+            BingWebmasterError: If deep link blocks cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_deep_link_blocks(site_url)
+            return await s.links.get_deep_link_blocks(site_url=site_url)
     
     @mcp.tool()
     async def add_deep_link_block(site_url: str, url: str) -> Dict[str, Any]:
@@ -550,10 +670,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to block
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If deep link block cannot be added
         """
         async with service as s:
-            return await s.links.add_deep_link_block(site_url, url)
+            return await s.links.add_deep_link_block(site_url=site_url, url=url)
     
     @mcp.tool()
     async def remove_deep_link_block(site_url: str, url: str) -> Dict[str, Any]:
@@ -564,10 +687,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to unblock
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If deep link block cannot be removed
         """
         async with service as s:
-            return await s.links.remove_deep_link_block(site_url, url)
+            return await s.links.remove_deep_link_block(site_url=site_url, url=url)
     
     @mcp.tool()
     async def update_deep_link(site_url: str, url: str, deep_link: str) -> Dict[str, Any]:
@@ -579,10 +705,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             deep_link: The new deep link
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If deep link cannot be updated
         """
         async with service as s:
-            return await s.links.update_deep_link(site_url, url, deep_link)
+            return await s.links.update_deep_link(site_url=site_url, url=url, deep_link=deep_link)
     
     @mcp.tool()
     async def get_deep_link_algo_urls(site_url: str) -> Dict[str, Any]:
@@ -592,10 +721,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the deep link algorithm URLs
+            Dict[str, Any]: Deep link algorithm URLs data
+            
+        Raises:
+            BingWebmasterError: If deep link algorithm URLs cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_deep_link_algo_urls(site_url)
+            return await s.links.get_deep_link_algo_urls(site_url=site_url)
     
     @mcp.tool()
     async def get_connected_pages(site_url: str) -> Dict[str, Any]:
@@ -605,10 +737,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the connected pages
+            Dict[str, Any]: Connected pages data
+            
+        Raises:
+            BingWebmasterError: If connected pages cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_connected_pages(site_url)
+            return await s.links.get_connected_pages(site_url=site_url)
     
     @mcp.tool()
     async def add_connected_page(site_url: str, url: str) -> Dict[str, Any]:
@@ -619,10 +754,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to add as a connected page
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If connected page cannot be added
         """
         async with service as s:
-            return await s.links.add_connected_page(site_url, url)
+            return await s.links.add_connected_page(site_url=site_url, url=url)
     
     # Content Management Tools
     @mcp.tool()
@@ -634,10 +772,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to get info for
             
         Returns:
-            Dict containing the URL info
+            Dict[str, Any]: URL information data
+            
+        Raises:
+            BingWebmasterError: If URL info cannot be retrieved
         """
         async with service as s:
-            return await s.content.get_url_info(site_url, url)
+            return await s.content.get_url_info(site_url=site_url, url=url)
     
     @mcp.tool()
     async def get_url_traffic_info(site_url: str, url: str) -> Dict[str, Any]:
@@ -648,10 +789,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to get traffic info for
             
         Returns:
-            Dict containing the URL traffic info
+            Dict[str, Any]: URL traffic information data
+            
+        Raises:
+            BingWebmasterError: If URL traffic info cannot be retrieved
         """
         async with service as s:
-            return await s.content.get_url_traffic_info(site_url, url)
+            return await s.content.get_url_traffic_info(site_url=site_url, url=url)
     
     @mcp.tool()
     async def get_children_url_info(site_url: str, url: str) -> Dict[str, Any]:
@@ -662,10 +806,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to get children info for
             
         Returns:
-            Dict containing the children URL info
+            Dict[str, Any]: Children URL information data
+            
+        Raises:
+            BingWebmasterError: If children URL info cannot be retrieved
         """
         async with service as s:
-            return await s.content.get_children_url_info(site_url, url)
+            return await s.content.get_children_url_info(site_url=site_url, url=url)
     
     @mcp.tool()
     async def get_children_url_traffic_info(site_url: str, url: str) -> Dict[str, Any]:
@@ -676,52 +823,64 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             url: The URL to get children traffic info for
             
         Returns:
-            Dict containing the children URL traffic info
+            Dict[str, Any]: Children URL traffic information data
+            
+        Raises:
+            BingWebmasterError: If children URL traffic info cannot be retrieved
         """
         async with service as s:
-            return await s.content.get_children_url_traffic_info(site_url, url)
+            return await s.content.get_children_url_traffic_info(site_url=site_url, url=url)
     
     # Content Blocking Tools
     @mcp.tool()
     async def get_blocked_urls(site_url: str) -> Dict[str, Any]:
-        """Get blocked URLs for a site.
+        """Get a list of blocked pages/directories for a site.
         
         Args:
             site_url: The URL of the site
             
         Returns:
-            Dict containing the blocked URLs
+            Dict[str, Any]: List of blocked URLs and their settings
+            
+        Raises:
+            BingWebmasterError: If blocked URLs cannot be retrieved
         """
         async with service as s:
-            return await s.blocking.get_blocked_urls(site_url)
+            return await s.blocking.get_blocked_urls(site_url=site_url)
     
     @mcp.tool()
     async def add_blocked_url(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a blocked URL for a site.
+        """Add a blocked URL to a site.
         
         Args:
             site_url: The URL of the site
-            url: The URL to block
+            url: The URL to be blocked
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If URL cannot be blocked
         """
         async with service as s:
-            return await s.blocking.add_blocked_url(site_url, url)
+            return await s.blocking.add_blocked_url(site_url=site_url, url=url)
     
     @mcp.tool()
     async def remove_blocked_url(site_url: str, url: str) -> Dict[str, Any]:
-        """Remove a blocked URL for a site.
+        """Remove a blocked URL from a site.
         
         Args:
             site_url: The URL of the site
-            url: The URL to unblock
+            url: The URL to be unblocked
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If URL cannot be unblocked
         """
         async with service as s:
-            return await s.blocking.remove_blocked_url(site_url, url)
+            return await s.blocking.remove_blocked_url(site_url=site_url, url=url)
     
     @mcp.tool()
     async def get_active_page_preview_blocks(site_url: str) -> Dict[str, Any]:
@@ -731,38 +890,47 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the active page preview blocks
+            Dict[str, Any]: List of active page preview blocks
+            
+        Raises:
+            BingWebmasterError: If preview blocks cannot be retrieved
         """
         async with service as s:
-            return await s.blocking.get_active_page_preview_blocks(site_url)
+            return await s.blocking.get_active_page_preview_blocks(site_url=site_url)
     
     @mcp.tool()
     async def add_page_preview_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a page preview block for a site.
+        """Add a page preview block.
         
         Args:
             site_url: The URL of the site
-            url: The URL to block from page previews
+            url: The URL to block from page preview
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If preview block cannot be added
         """
         async with service as s:
-            return await s.blocking.add_page_preview_block(site_url, url)
+            return await s.blocking.add_page_preview_block(site_url=site_url, url=url)
     
     @mcp.tool()
     async def remove_page_preview_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Remove a page preview block for a site.
+        """Remove a page preview block.
         
         Args:
             site_url: The URL of the site
-            url: The URL to unblock from page previews
+            url: The URL to remove the page preview block from
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If preview block cannot be removed
         """
         async with service as s:
-            return await s.blocking.remove_page_preview_block(site_url, url)
+            return await s.blocking.remove_page_preview_block(site_url=site_url, url=url)
     
     # Regional Settings Tools
     @mcp.tool()
@@ -773,10 +941,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict containing the country region settings
+            Dict[str, Any]: Country region settings data
+            
+        Raises:
+            BingWebmasterError: If country region settings cannot be retrieved
         """
         async with service as s:
-            return await s.regional.get_country_region_settings(site_url)
+            return await s.regional.get_country_region_settings(site_url=site_url)
     
     @mcp.tool()
     async def add_country_region_settings(site_url: str, country: str, region: str) -> Dict[str, Any]:
@@ -788,10 +959,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             region: The region code
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If country region settings cannot be added
         """
         async with service as s:
-            return await s.regional.add_country_region_settings(site_url, country, region)
+            return await s.regional.add_country_region_settings(site_url=site_url, country=country, region=region)
     
     @mcp.tool()
     async def remove_country_region_settings(site_url: str, country: str, region: str) -> Dict[str, Any]:
@@ -803,7 +977,10 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             region: The region code
             
         Returns:
-            Dict containing the result of the operation
+            Dict[str, Any]: Result of the operation
+            
+        Raises:
+            BingWebmasterError: If country region settings cannot be removed
         """
         async with service as s:
-            return await s.regional.remove_country_region_settings(site_url, country, region) 
+            return await s.regional.remove_country_region_settings(site_url=site_url, country=country, region=region) 
