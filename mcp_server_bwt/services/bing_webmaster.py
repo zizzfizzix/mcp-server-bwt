@@ -11,8 +11,12 @@ class SiteInfo:
 
 class BingWebmasterService:
     def __init__(self, api_key: str):
-        settings = Settings(api_key=api_key)
-        self.client = BingWebmasterClient(settings)
+        self.settings = Settings(api_key=api_key)
+        self.client = None
+        
+    async def __aenter__(self):
+        self.client = BingWebmasterClient(self.settings)
+        await self.client.__aenter__()
         
         # Expose all services directly
         self.sites = self.client.sites
@@ -25,4 +29,9 @@ class BingWebmasterService:
         self.blocking = self.client.blocking
         self.regional = self.client.regional
         self.urls = self.client.urls
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.client:
+            await self.client.__aexit__(exc_type, exc_val, exc_tb)
    
