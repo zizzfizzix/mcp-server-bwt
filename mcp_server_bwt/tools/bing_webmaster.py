@@ -849,12 +849,14 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             return await s.blocking.get_blocked_urls(site_url=site_url)
     
     @mcp.tool()
-    async def add_blocked_url(site_url: str, url: str) -> Dict[str, Any]:
+    async def add_blocked_url(site_url: str, url: str, entity_type: str = "Page", date: Optional[str] = None) -> Dict[str, Any]:
         """Add a blocked URL to a site.
         
         Args:
             site_url: The URL of the site
             url: The URL to be blocked
+            entity_type: The type of entity to block (Page or Directory)
+            date: The date the URL was blocked (default: current date)
             
         Returns:
             Dict[str, Any]: Result of the operation
@@ -863,15 +865,17 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If URL cannot be blocked
         """
         async with service as s:
-            return await s.blocking.add_blocked_url(site_url=site_url, url=url)
+            return await s.blocking.add_blocked_url(site_url=site_url, blocked_url=url, entity_type=entity_type, date=date)
     
     @mcp.tool()
-    async def remove_blocked_url(site_url: str, url: str) -> Dict[str, Any]:
+    async def remove_blocked_url(site_url: str, url: str, entity_type: str = "Page", date: Optional[str] = None) -> Dict[str, Any]:
         """Remove a blocked URL from a site.
         
         Args:
             site_url: The URL of the site
             url: The URL to be unblocked
+            entity_type: The type of entity to unblock (Page or Directory)
+            date: The date the URL was blocked
             
         Returns:
             Dict[str, Any]: Result of the operation
@@ -880,7 +884,7 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If URL cannot be unblocked
         """
         async with service as s:
-            return await s.blocking.remove_blocked_url(site_url=site_url, url=url)
+            return await s.blocking.remove_blocked_url(site_url=site_url, blocked_url=url, entity_type=entity_type, date=date)
     
     @mcp.tool()
     async def get_active_page_preview_blocks(site_url: str) -> Dict[str, Any]:
@@ -899,12 +903,13 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             return await s.blocking.get_active_page_preview_blocks(site_url=site_url)
     
     @mcp.tool()
-    async def add_page_preview_block(site_url: str, url: str) -> Dict[str, Any]:
+    async def add_page_preview_block(site_url: str, url: str, reason: str) -> Dict[str, Any]:
         """Add a page preview block.
         
         Args:
             site_url: The URL of the site
             url: The URL to block from page preview
+            reason: The reason for blocking the page preview
             
         Returns:
             Dict[str, Any]: Result of the operation
@@ -913,7 +918,7 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If preview block cannot be added
         """
         async with service as s:
-            return await s.blocking.add_page_preview_block(site_url=site_url, url=url)
+            return await s.blocking.add_page_preview_block(site_url=site_url, url=url, reason=reason)
     
     @mcp.tool()
     async def remove_page_preview_block(site_url: str, url: str) -> Dict[str, Any]:
