@@ -1,6 +1,18 @@
 from dataclasses import dataclass
 from typing import List, Optional
 from bing_webmaster_tools import BingWebmasterClient, Settings
+from bing_webmaster_tools.services import (
+    site_management,
+    submission,
+    traffic_analysis,
+    crawling,
+    keyword_analysis,
+    link_analysis,
+    content_management,
+    content_blocking,
+    regional_settings,
+    url_management
+)
 
 @dataclass
 class SiteInfo:
@@ -19,19 +31,18 @@ class BingWebmasterService:
         await self.client.__aenter__()
         
         # Expose all services directly
-        self.sites = self.client.sites
-        self.submission = self.client.submission
-        self.traffic = self.client.traffic
-        self.crawling = self.client.crawling
-        self.keywords = self.client.keywords
-        self.links = self.client.links
-        self.content = self.client.content
-        self.blocking = self.client.blocking
-        self.regional = self.client.regional
-        self.urls = self.client.urls
+        self.sites = site_management.SiteManagementService(self.client)
+        self.submission = submission.SubmissionService(self.client)
+        self.traffic = traffic_analysis.TrafficAnalysisService(self.client)
+        self.crawling = crawling.CrawlingService(self.client)
+        self.keywords = keyword_analysis.KeywordAnalysisService(self.client)
+        self.links = link_analysis.LinkAnalysisService(self.client)
+        self.content = content_management.ContentManagementService(self.client)
+        self.blocking = content_blocking.ContentBlockingService(self.client)
+        self.regional = regional_settings.RegionalSettingsService(self.client)
+        self.urls = url_management.UrlManagementService(self.client)
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.client:
             await self.client.__aexit__(exc_type, exc_val, exc_tb)
-   

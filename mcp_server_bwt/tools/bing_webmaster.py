@@ -1,986 +1,160 @@
-from typing import List, Dict, Any, Optional
+from typing import Any, Callable, TypeVar
+from functools import wraps
+import inspect
 from mcp.server.fastmcp import FastMCP
-from mcp_server_bwt.services.bing_webmaster import BingWebmasterService, SiteInfo
+from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
+from bing_webmaster_tools.services import (
+    site_management,
+    submission,
+    traffic_analysis,
+    crawling,
+    keyword_analysis,
+    link_analysis,
+    content_management,
+    content_blocking,
+    regional_settings,
+    url_management
+)
+
+T = TypeVar('T')
+
+# Map service attribute names to their corresponding service classes
+SERVICE_CLASSES = {
+    'sites': site_management.SiteManagementService,
+    'submission': submission.SubmissionService,
+    'traffic': traffic_analysis.TrafficAnalysisService,
+    'crawling': crawling.CrawlingService,
+    'keywords': keyword_analysis.KeywordAnalysisService,
+    'links': link_analysis.LinkAnalysisService,
+    'content': content_management.ContentManagementService,
+    'blocking': content_blocking.ContentBlockingService,
+    'regional': regional_settings.RegionalSettingsService,
+    'urls': url_management.UrlManagementService
+}
+
+def wrap_service_method(mcp: FastMCP, service: BingWebmasterService, service_attr: str, method_name: str) -> Callable:
+    """Helper function to wrap a service method with mcp.tool() while preserving its signature and docstring.
+    
+    Args:
+        mcp: The MCP server instance
+        service: The BingWebmasterService instance
+        service_attr: The service attribute name (e.g., 'sites', 'submission')
+        method_name: The method name to wrap
+        
+    Returns:
+        The wrapped method as an MCP tool
+    """
+    # Get the service class from our mapping
+    service_class = SERVICE_CLASSES[service_attr]
+    # Get the original method
+    original_method = getattr(service_class, method_name)
+    # Get the signature
+    sig = inspect.signature(original_method)
+    # Remove 'self' parameter from signature
+    parameters = list(sig.parameters.values())[1:]  # Skip 'self'
+    
+    # Create new signature without 'self'
+    new_sig = sig.replace(parameters=parameters)
+    
+    # Create wrapper function with same signature
+    @mcp.tool()
+    @wraps(original_method)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        # Filter out any 'self' arguments that might be passed by the MCP client
+        kwargs = {k: v for k, v in kwargs.items() if k != 'self'}
+        
+        async with service as s:
+            service_obj = getattr(s, service_attr)
+            # Get the method from the instance
+            method = getattr(service_obj, method_name)
+            # Call the method directly - it's already bound to the instance
+            return await method(*args, **kwargs)
+            
+    # Copy signature and docstring
+    wrapper.__signature__ = new_sig  # type: ignore
+    wrapper.__doc__ = original_method.__doc__
+    
+    return wrapper
 
 def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     # Site Management Tools
-    @mcp.tool()
-    async def list_verified_sites() -> List[SiteInfo]:
-        """List all verified sites in Bing Webmaster Tools.
-        
-        Returns:
-            List[SiteInfo]: List of verified sites with their information
-            
-        Raises:
-            BingWebmasterError: If sites cannot be retrieved
-        """
-        async with service as s:
-            return await s.sites.get_sites()
-    
-    @mcp.tool()
-    async def add_site(site_url: str) -> Dict[str, Any]:
-        """Add a new site to Bing Webmaster Tools.
-        
-        Args:
-            site_url: The URL of the site to add
-            
-        Returns:
-            Dict[str, Any]: Result of the operation containing site information
-            
-        Raises:
-            BingWebmasterError: If site cannot be added
-        """
-        async with service as s:
-            return await s.sites.add_site(site_url=site_url)
-    
-    @mcp.tool()
-    async def verify_site(site_url: str) -> Dict[str, Any]:
-        """Verify a site in Bing Webmaster Tools.
-        
-        Args:
-            site_url: The URL of the site to verify
-            
-        Returns:
-            Dict[str, Any]: Result of the verification operation
-            
-        Raises:
-            BingWebmasterError: If site cannot be verified
-        """
-        async with service as s:
-            return await s.sites.verify_site(site_url=site_url)
-    
-    @mcp.tool()
-    async def remove_site(site_url: str) -> Dict[str, Any]:
-        """Remove a site from Bing Webmaster Tools.
-        
-        Args:
-            site_url: The URL of the site to remove
-            
-        Returns:
-            Dict[str, Any]: Result of the removal operation
-            
-        Raises:
-            BingWebmasterError: If site cannot be removed
-        """
-        async with service as s:
-            return await s.sites.remove_site(site_url=site_url)
-    
-    @mcp.tool()
-    async def get_site_roles(site_url: str) -> Dict[str, Any]:
-        """Get roles for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Site roles information
-            
-        Raises:
-            BingWebmasterError: If site roles cannot be retrieved
-        """
-        async with service as s:
-            return await s.sites.get_site_roles(site_url=site_url)
-    
-    @mcp.tool()
-    async def add_site_roles(site_url: str, roles: List[str]) -> Dict[str, Any]:
-        """Add roles to a site.
-        
-        Args:
-            site_url: The URL of the site
-            roles: List of roles to add
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If roles cannot be added
-        """
-        async with service as s:
-            return await s.sites.add_site_roles(site_url=site_url, roles=roles)
-    
-    @mcp.tool()
-    async def remove_site_role(site_url: str, role: str) -> Dict[str, Any]:
-        """Remove a role from a site.
-        
-        Args:
-            site_url: The URL of the site
-            role: The role to remove
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If role cannot be removed
-        """
-        async with service as s:
-            return await s.sites.remove_site_role(site_url=site_url, role=role)
-    
-    @mcp.tool()
-    async def get_site_moves(site_url: str) -> Dict[str, Any]:
-        """Get site moves for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Information about site moves
-            
-        Raises:
-            BingWebmasterError: If site moves cannot be retrieved
-        """
-        async with service as s:
-            return await s.sites.get_site_moves(site_url=site_url)
-    
-    @mcp.tool()
-    async def submit_site_move(site_url: str, new_url: str) -> Dict[str, Any]:
-        """Submit a site move.
-        
-        Args:
-            site_url: The current URL of the site
-            new_url: The new URL of the site
-            
-        Returns:
-            Dict[str, Any]: Result of the site move submission
-            
-        Raises:
-            BingWebmasterError: If site move cannot be submitted
-        """
-        async with service as s:
-            return await s.sites.submit_site_move(site_url=site_url, new_url=new_url)
+    list_verified_sites = wrap_service_method(mcp, service, 'sites', 'get_sites')
+    add_site = wrap_service_method(mcp, service, 'sites', 'add_site')
+    verify_site = wrap_service_method(mcp, service, 'sites', 'verify_site')
+    remove_site = wrap_service_method(mcp, service, 'sites', 'remove_site')
+    get_site_roles = wrap_service_method(mcp, service, 'sites', 'get_site_roles')
+    add_site_roles = wrap_service_method(mcp, service, 'sites', 'add_site_roles')
+    remove_site_role = wrap_service_method(mcp, service, 'sites', 'remove_site_role')
+    get_site_moves = wrap_service_method(mcp, service, 'sites', 'get_site_moves')
+    submit_site_move = wrap_service_method(mcp, service, 'sites', 'submit_site_move')
     
     # Submission Tools
-    @mcp.tool()
-    async def submit_url_for_indexing(url: str) -> Dict[str, Any]:
-        """Submit a URL to Bing for indexing.
-        
-        Args:
-            url: The URL to submit for indexing
-            
-        Returns:
-            Dict[str, Any]: Result of the URL submission
-            
-        Raises:
-            BingWebmasterError: If URL cannot be submitted
-        """
-        async with service as s:
-            return await s.submission.submit_url(url=url)
-    
-    @mcp.tool()
-    async def submit_urls_batch(urls: List[str]) -> Dict[str, Any]:
-        """Submit multiple URLs to Bing for indexing.
-        
-        Args:
-            urls: List of URLs to submit for indexing
-            
-        Returns:
-            Dict[str, Any]: Result of the batch URL submission
-            
-        Raises:
-            BingWebmasterError: If URLs cannot be submitted
-        """
-        async with service as s:
-            return await s.submission.submit_url_batch(urls=urls)
-    
-    @mcp.tool()
-    async def submit_content(url: str, content: str) -> Dict[str, Any]:
-        """Submit content for a URL.
-        
-        Args:
-            url: The URL to submit content for
-            content: The content to submit
-            
-        Returns:
-            Dict[str, Any]: Result of the content submission
-            
-        Raises:
-            BingWebmasterError: If content cannot be submitted
-        """
-        async with service as s:
-            return await s.submission.submit_content(url=url, content=content)
-    
-    @mcp.tool()
-    async def submit_feed(site_url: str, feed_url: str) -> Dict[str, Any]:
-        """Submit a feed for a site.
-        
-        Args:
-            site_url: The URL of the site
-            feed_url: The URL of the feed
-            
-        Returns:
-            Dict[str, Any]: Result of the feed submission
-            
-        Raises:
-            BingWebmasterError: If feed cannot be submitted
-        """
-        async with service as s:
-            return await s.submission.submit_feed(site_url=site_url, feed_url=feed_url)
-    
-    @mcp.tool()
-    async def get_feeds(site_url: str) -> Dict[str, Any]:
-        """Get feeds for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: List of feeds for the site
-            
-        Raises:
-            BingWebmasterError: If feeds cannot be retrieved
-        """
-        async with service as s:
-            return await s.submission.get_feeds(site_url=site_url)
-    
-    @mcp.tool()
-    async def get_feed_details(site_url: str, feed_url: str) -> Dict[str, Any]:
-        """Get details for a feed.
-        
-        Args:
-            site_url: The URL of the site
-            feed_url: The URL of the feed
-            
-        Returns:
-            Dict[str, Any]: Feed details
-            
-        Raises:
-            BingWebmasterError: If feed details cannot be retrieved
-        """
-        async with service as s:
-            return await s.submission.get_feed_details(site_url=site_url, feed_url=feed_url)
-    
-    @mcp.tool()
-    async def remove_feed(site_url: str, feed_url: str) -> Dict[str, Any]:
-        """Remove a feed from a site.
-        
-        Args:
-            site_url: The URL of the site
-            feed_url: The URL of the feed
-            
-        Returns:
-            Dict[str, Any]: Result of the feed removal
-            
-        Raises:
-            BingWebmasterError: If feed cannot be removed
-        """
-        async with service as s:
-            return await s.submission.remove_feed(site_url=site_url, feed_url=feed_url)
-    
-    @mcp.tool()
-    async def get_url_submission_quota(site_url: str) -> Dict[str, Any]:
-        """Get URL submission quota for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: URL submission quota information
-            
-        Raises:
-            BingWebmasterError: If quota cannot be retrieved
-        """
-        async with service as s:
-            return await s.submission.get_url_submission_quota(site_url=site_url)
-    
-    @mcp.tool()
-    async def get_content_submission_quota(site_url: str) -> Dict[str, Any]:
-        """Get content submission quota for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Content submission quota information
-            
-        Raises:
-            BingWebmasterError: If quota cannot be retrieved
-        """
-        async with service as s:
-            return await s.submission.get_content_submission_quota(site_url=site_url)
-    
-    @mcp.tool()
-    async def fetch_url(url: str) -> Dict[str, Any]:
-        """Fetch a URL.
-        
-        Args:
-            url: The URL to fetch
-            
-        Returns:
-            Dict[str, Any]: Fetch result
-            
-        Raises:
-            BingWebmasterError: If URL cannot be fetched
-        """
-        async with service as s:
-            return await s.submission.fetch_url(url=url)
-    
-    @mcp.tool()
-    async def get_fetched_urls(site_url: str) -> Dict[str, Any]:
-        """Get fetched URLs for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: List of fetched URLs
-            
-        Raises:
-            BingWebmasterError: If fetched URLs cannot be retrieved
-        """
-        async with service as s:
-            return await s.submission.get_fetched_urls(site_url=site_url)
-    
-    @mcp.tool()
-    async def get_fetched_url_details(site_url: str, url: str) -> Dict[str, Any]:
-        """Get details for a fetched URL.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to get details for
-            
-        Returns:
-            Dict[str, Any]: Fetched URL details
-            
-        Raises:
-            BingWebmasterError: If URL details cannot be retrieved
-        """
-        async with service as s:
-            return await s.submission.get_fetched_url_details(site_url=site_url, url=url)
+    submit_url_for_indexing = wrap_service_method(mcp, service, 'submission', 'submit_url')
+    submit_urls_batch = wrap_service_method(mcp, service, 'submission', 'submit_url_batch')
+    submit_content = wrap_service_method(mcp, service, 'submission', 'submit_content')
+    submit_feed = wrap_service_method(mcp, service, 'submission', 'submit_feed')
+    get_feeds = wrap_service_method(mcp, service, 'submission', 'get_feeds')
+    get_feed_details = wrap_service_method(mcp, service, 'submission', 'get_feed_details')
+    remove_feed = wrap_service_method(mcp, service, 'submission', 'remove_feed')
+    get_url_submission_quota = wrap_service_method(mcp, service, 'submission', 'get_url_submission_quota')
+    get_content_submission_quota = wrap_service_method(mcp, service, 'submission', 'get_content_submission_quota')
+    fetch_url = wrap_service_method(mcp, service, 'submission', 'fetch_url')
+    get_fetched_urls = wrap_service_method(mcp, service, 'submission', 'get_fetched_urls')
+    get_fetched_url_details = wrap_service_method(mcp, service, 'submission', 'get_fetched_url_details')
     
     # Traffic Analysis Tools
-    @mcp.tool()
-    async def get_query_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get query stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            start_date: The start date in YYYY-MM-DD format
-            end_date: The end date in YYYY-MM-DD format
-            
-        Returns:
-            Dict[str, Any]: Query statistics data
-            
-        Raises:
-            BingWebmasterError: If query stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.traffic.get_query_stats(site_url=site_url, start_date=start_date, end_date=end_date)
-    
-    @mcp.tool()
-    async def get_query_traffic_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get query traffic stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            start_date: The start date in YYYY-MM-DD format
-            end_date: The end date in YYYY-MM-DD format
-            
-        Returns:
-            Dict[str, Any]: Query traffic statistics data
-            
-        Raises:
-            BingWebmasterError: If query traffic stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.traffic.get_query_traffic_stats(site_url=site_url, start_date=start_date, end_date=end_date)
-    
-    @mcp.tool()
-    async def get_query_page_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get query page stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            start_date: The start date in YYYY-MM-DD format
-            end_date: The end date in YYYY-MM-DD format
-            
-        Returns:
-            Dict[str, Any]: Query page statistics data
-            
-        Raises:
-            BingWebmasterError: If query page stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.traffic.get_query_page_stats(site_url=site_url, start_date=start_date, end_date=end_date)
-    
-    @mcp.tool()
-    async def get_query_page_detail_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get query page detail stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            start_date: The start date in YYYY-MM-DD format
-            end_date: The end date in YYYY-MM-DD format
-            
-        Returns:
-            Dict[str, Any]: Query page detail statistics data
-            
-        Raises:
-            BingWebmasterError: If query page detail stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.traffic.get_query_page_detail_stats(site_url=site_url, start_date=start_date, end_date=end_date)
-    
-    @mcp.tool()
-    async def get_page_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get page stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            start_date: The start date in YYYY-MM-DD format
-            end_date: The end date in YYYY-MM-DD format
-            
-        Returns:
-            Dict[str, Any]: Page statistics data
-            
-        Raises:
-            BingWebmasterError: If page stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.traffic.get_page_stats(site_url=site_url, start_date=start_date, end_date=end_date)
-    
-    @mcp.tool()
-    async def get_page_query_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get page query stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            start_date: The start date in YYYY-MM-DD format
-            end_date: The end date in YYYY-MM-DD format
-            
-        Returns:
-            Dict[str, Any]: Page query statistics data
-            
-        Raises:
-            BingWebmasterError: If page query stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.traffic.get_page_query_stats(site_url=site_url, start_date=start_date, end_date=end_date)
-    
-    @mcp.tool()
-    async def get_rank_and_traffic_stats(site_url: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get rank and traffic stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            start_date: The start date in YYYY-MM-DD format
-            end_date: The end date in YYYY-MM-DD format
-            
-        Returns:
-            Dict[str, Any]: Rank and traffic statistics data
-            
-        Raises:
-            BingWebmasterError: If rank and traffic stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.traffic.get_rank_and_traffic_stats(site_url=site_url, start_date=start_date, end_date=end_date)
+    get_query_stats = wrap_service_method(mcp, service, 'traffic', 'get_query_stats')
+    get_query_traffic_stats = wrap_service_method(mcp, service, 'traffic', 'get_query_traffic_stats')
+    get_query_page_stats = wrap_service_method(mcp, service, 'traffic', 'get_query_page_stats')
+    get_query_page_detail_stats = wrap_service_method(mcp, service, 'traffic', 'get_query_page_detail_stats')
+    get_page_stats = wrap_service_method(mcp, service, 'traffic', 'get_page_stats')
+    get_page_query_stats = wrap_service_method(mcp, service, 'traffic', 'get_page_query_stats')
+    get_rank_and_traffic_stats = wrap_service_method(mcp, service, 'traffic', 'get_rank_and_traffic_stats')
     
     # Crawling Tools
-    @mcp.tool()
-    async def get_crawl_stats(site_url: str) -> Dict[str, Any]:
-        """Get crawl stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Crawl statistics data
-            
-        Raises:
-            BingWebmasterError: If crawl stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.crawling.get_crawl_stats(site_url=site_url)
-    
-    @mcp.tool()
-    async def get_crawl_settings(site_url: str) -> Dict[str, Any]:
-        """Get crawl settings for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Crawl settings data
-            
-        Raises:
-            BingWebmasterError: If crawl settings cannot be retrieved
-        """
-        async with service as s:
-            return await s.crawling.get_crawl_settings(site_url=site_url)
-    
-    @mcp.tool()
-    async def save_crawl_settings(site_url: str, settings: Dict[str, Any]) -> Dict[str, Any]:
-        """Save crawl settings for a site.
-        
-        Args:
-            site_url: The URL of the site
-            settings: The crawl settings to save
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If crawl settings cannot be saved
-        """
-        async with service as s:
-            return await s.crawling.save_crawl_settings(site_url=site_url, settings=settings)
-    
-    @mcp.tool()
-    async def get_crawl_issues(site_url: str) -> Dict[str, Any]:
-        """Get crawl issues for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Crawl issues data
-            
-        Raises:
-            BingWebmasterError: If crawl issues cannot be retrieved
-        """
-        async with service as s:
-            return await s.crawling.get_crawl_issues(site_url=site_url)
+    get_crawl_stats = wrap_service_method(mcp, service, 'crawling', 'get_crawl_stats')
+    get_crawl_settings = wrap_service_method(mcp, service, 'crawling', 'get_crawl_settings')
+    save_crawl_settings = wrap_service_method(mcp, service, 'crawling', 'save_crawl_settings')
+    get_crawl_issues = wrap_service_method(mcp, service, 'crawling', 'get_crawl_issues')
     
     # Keyword Analysis Tools
-    @mcp.tool()
-    async def get_keyword(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
-        """Get keyword data for a site.
-        
-        Args:
-            site_url: The URL of the site
-            keyword: The keyword to get data for
-            language: The language code (default: "en")
-            
-        Returns:
-            Dict[str, Any]: Keyword data
-            
-        Raises:
-            BingWebmasterError: If keyword data cannot be retrieved
-        """
-        async with service as s:
-            return await s.keywords.get_keyword(site_url=site_url, keyword=keyword, language=language)
-    
-    @mcp.tool()
-    async def get_keyword_stats(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
-        """Get keyword stats for a site.
-        
-        Args:
-            site_url: The URL of the site
-            keyword: The keyword to get stats for
-            language: The language code (default: "en")
-            
-        Returns:
-            Dict[str, Any]: Keyword statistics data
-            
-        Raises:
-            BingWebmasterError: If keyword stats cannot be retrieved
-        """
-        async with service as s:
-            return await s.keywords.get_keyword_stats(site_url=site_url, keyword=keyword, language=language)
-    
-    @mcp.tool()
-    async def get_related_keywords(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
-        """Get related keywords for a site.
-        
-        Args:
-            site_url: The URL of the site
-            keyword: The keyword to get related keywords for
-            language: The language code (default: "en")
-            
-        Returns:
-            Dict[str, Any]: Related keywords data
-            
-        Raises:
-            BingWebmasterError: If related keywords cannot be retrieved
-        """
-        async with service as s:
-            return await s.keywords.get_related_keywords(site_url=site_url, keyword=keyword, language=language)
+    get_keyword = wrap_service_method(mcp, service, 'keywords', 'get_keyword')
+    get_keyword_stats = wrap_service_method(mcp, service, 'keywords', 'get_keyword_stats')
+    get_related_keywords = wrap_service_method(mcp, service, 'keywords', 'get_related_keywords')
     
     # Link Analysis Tools
-    @mcp.tool()
-    async def get_link_counts(site_url: str) -> Dict[str, Any]:
-        """Get link counts for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Link counts data
-            
-        Raises:
-            BingWebmasterError: If link counts cannot be retrieved
-        """
-        async with service as s:
-            return await s.links.get_link_counts(site_url=site_url)
-    
-    @mcp.tool()
-    async def get_url_links(site_url: str, url: str) -> Dict[str, Any]:
-        """Get links for a URL.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to get links for
-            
-        Returns:
-            Dict[str, Any]: URL links data
-            
-        Raises:
-            BingWebmasterError: If URL links cannot be retrieved
-        """
-        async with service as s:
-            return await s.links.get_url_links(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def get_deep_link(site_url: str, url: str) -> Dict[str, Any]:
-        """Get deep link for a URL.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to get deep link for
-            
-        Returns:
-            Dict[str, Any]: Deep link data
-            
-        Raises:
-            BingWebmasterError: If deep link cannot be retrieved
-        """
-        async with service as s:
-            return await s.links.get_deep_link(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def get_deep_link_blocks(site_url: str) -> Dict[str, Any]:
-        """Get deep link blocks for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Deep link blocks data
-            
-        Raises:
-            BingWebmasterError: If deep link blocks cannot be retrieved
-        """
-        async with service as s:
-            return await s.links.get_deep_link_blocks(site_url=site_url)
-    
-    @mcp.tool()
-    async def add_deep_link_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a deep link block for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to block
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If deep link block cannot be added
-        """
-        async with service as s:
-            return await s.links.add_deep_link_block(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def remove_deep_link_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Remove a deep link block for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to unblock
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If deep link block cannot be removed
-        """
-        async with service as s:
-            return await s.links.remove_deep_link_block(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def update_deep_link(site_url: str, url: str, deep_link: str) -> Dict[str, Any]:
-        """Update a deep link for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to update deep link for
-            deep_link: The new deep link
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If deep link cannot be updated
-        """
-        async with service as s:
-            return await s.links.update_deep_link(site_url=site_url, url=url, deep_link=deep_link)
-    
-    @mcp.tool()
-    async def get_deep_link_algo_urls(site_url: str) -> Dict[str, Any]:
-        """Get deep link algorithm URLs for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Deep link algorithm URLs data
-            
-        Raises:
-            BingWebmasterError: If deep link algorithm URLs cannot be retrieved
-        """
-        async with service as s:
-            return await s.links.get_deep_link_algo_urls(site_url=site_url)
-    
-    @mcp.tool()
-    async def get_connected_pages(site_url: str) -> Dict[str, Any]:
-        """Get connected pages for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Connected pages data
-            
-        Raises:
-            BingWebmasterError: If connected pages cannot be retrieved
-        """
-        async with service as s:
-            return await s.links.get_connected_pages(site_url=site_url)
-    
-    @mcp.tool()
-    async def add_connected_page(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a connected page for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to add as a connected page
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If connected page cannot be added
-        """
-        async with service as s:
-            return await s.links.add_connected_page(site_url=site_url, url=url)
+    get_link_counts = wrap_service_method(mcp, service, 'links', 'get_link_counts')
+    get_url_links = wrap_service_method(mcp, service, 'links', 'get_url_links')
+    get_deep_link = wrap_service_method(mcp, service, 'links', 'get_deep_link')
+    get_deep_link_blocks = wrap_service_method(mcp, service, 'links', 'get_deep_link_blocks')
+    add_deep_link_block = wrap_service_method(mcp, service, 'links', 'add_deep_link_block')
+    remove_deep_link_block = wrap_service_method(mcp, service, 'links', 'remove_deep_link_block')
+    update_deep_link = wrap_service_method(mcp, service, 'links', 'update_deep_link')
+    get_deep_link_algo_urls = wrap_service_method(mcp, service, 'links', 'get_deep_link_algo_urls')
+    get_connected_pages = wrap_service_method(mcp, service, 'links', 'get_connected_pages')
+    add_connected_page = wrap_service_method(mcp, service, 'links', 'add_connected_page')
     
     # Content Management Tools
-    @mcp.tool()
-    async def get_url_info(site_url: str, url: str) -> Dict[str, Any]:
-        """Get URL info for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to get info for
-            
-        Returns:
-            Dict[str, Any]: URL information data
-            
-        Raises:
-            BingWebmasterError: If URL info cannot be retrieved
-        """
-        async with service as s:
-            return await s.content.get_url_info(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def get_url_traffic_info(site_url: str, url: str) -> Dict[str, Any]:
-        """Get URL traffic info for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to get traffic info for
-            
-        Returns:
-            Dict[str, Any]: URL traffic information data
-            
-        Raises:
-            BingWebmasterError: If URL traffic info cannot be retrieved
-        """
-        async with service as s:
-            return await s.content.get_url_traffic_info(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def get_children_url_info(site_url: str, url: str) -> Dict[str, Any]:
-        """Get children URL info for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to get children info for
-            
-        Returns:
-            Dict[str, Any]: Children URL information data
-            
-        Raises:
-            BingWebmasterError: If children URL info cannot be retrieved
-        """
-        async with service as s:
-            return await s.content.get_children_url_info(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def get_children_url_traffic_info(site_url: str, url: str) -> Dict[str, Any]:
-        """Get children URL traffic info for a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to get children traffic info for
-            
-        Returns:
-            Dict[str, Any]: Children URL traffic information data
-            
-        Raises:
-            BingWebmasterError: If children URL traffic info cannot be retrieved
-        """
-        async with service as s:
-            return await s.content.get_children_url_traffic_info(site_url=site_url, url=url)
+    get_url_info = wrap_service_method(mcp, service, 'content', 'get_url_info')
+    get_url_traffic_info = wrap_service_method(mcp, service, 'content', 'get_url_traffic_info')
+    get_children_url_info = wrap_service_method(mcp, service, 'content', 'get_children_url_info')
+    get_children_url_traffic_info = wrap_service_method(mcp, service, 'content', 'get_children_url_traffic_info')
     
     # Content Blocking Tools
-    @mcp.tool()
-    async def get_blocked_urls(site_url: str) -> Dict[str, Any]:
-        """Get a list of blocked pages/directories for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: List of blocked URLs and their settings
-            
-        Raises:
-            BingWebmasterError: If blocked URLs cannot be retrieved
-        """
-        async with service as s:
-            return await s.blocking.get_blocked_urls(site_url=site_url)
-    
-    @mcp.tool()
-    async def add_blocked_url(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a blocked URL to a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to be blocked
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If URL cannot be blocked
-        """
-        async with service as s:
-            return await s.blocking.add_blocked_url(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def remove_blocked_url(site_url: str, url: str) -> Dict[str, Any]:
-        """Remove a blocked URL from a site.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to be unblocked
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If URL cannot be unblocked
-        """
-        async with service as s:
-            return await s.blocking.remove_blocked_url(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def get_active_page_preview_blocks(site_url: str) -> Dict[str, Any]:
-        """Get active page preview blocks for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: List of active page preview blocks
-            
-        Raises:
-            BingWebmasterError: If preview blocks cannot be retrieved
-        """
-        async with service as s:
-            return await s.blocking.get_active_page_preview_blocks(site_url=site_url)
-    
-    @mcp.tool()
-    async def add_page_preview_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a page preview block.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to block from page preview
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If preview block cannot be added
-        """
-        async with service as s:
-            return await s.blocking.add_page_preview_block(site_url=site_url, url=url)
-    
-    @mcp.tool()
-    async def remove_page_preview_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Remove a page preview block.
-        
-        Args:
-            site_url: The URL of the site
-            url: The URL to remove the page preview block from
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If preview block cannot be removed
-        """
-        async with service as s:
-            return await s.blocking.remove_page_preview_block(site_url=site_url, url=url)
+    get_blocked_urls = wrap_service_method(mcp, service, 'blocking', 'get_blocked_urls')
+    add_blocked_url = wrap_service_method(mcp, service, 'blocking', 'add_blocked_url')
+    remove_blocked_url = wrap_service_method(mcp, service, 'blocking', 'remove_blocked_url')
+    get_active_page_preview_blocks = wrap_service_method(mcp, service, 'blocking', 'get_active_page_preview_blocks')
+    add_page_preview_block = wrap_service_method(mcp, service, 'blocking', 'add_page_preview_block')
+    remove_page_preview_block = wrap_service_method(mcp, service, 'blocking', 'remove_page_preview_block')
     
     # Regional Settings Tools
-    @mcp.tool()
-    async def get_country_region_settings(site_url: str) -> Dict[str, Any]:
-        """Get country region settings for a site.
-        
-        Args:
-            site_url: The URL of the site
-            
-        Returns:
-            Dict[str, Any]: Country region settings data
-            
-        Raises:
-            BingWebmasterError: If country region settings cannot be retrieved
-        """
-        async with service as s:
-            return await s.regional.get_country_region_settings(site_url=site_url)
+    get_country_region_settings = wrap_service_method(mcp, service, 'regional', 'get_country_region_settings')
+    add_country_region_settings = wrap_service_method(mcp, service, 'regional', 'add_country_region_settings')
+    remove_country_region_settings = wrap_service_method(mcp, service, 'regional', 'remove_country_region_settings')
     
-    @mcp.tool()
-    async def add_country_region_settings(site_url: str, country: str, region: str) -> Dict[str, Any]:
-        """Add country region settings for a site.
-        
-        Args:
-            site_url: The URL of the site
-            country: The country code
-            region: The region code
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If country region settings cannot be added
-        """
-        async with service as s:
-            return await s.regional.add_country_region_settings(site_url=site_url, country=country, region=region)
-    
-    @mcp.tool()
-    async def remove_country_region_settings(site_url: str, country: str, region: str) -> Dict[str, Any]:
-        """Remove country region settings for a site.
-        
-        Args:
-            site_url: The URL of the site
-            country: The country code
-            region: The region code
-            
-        Returns:
-            Dict[str, Any]: Result of the operation
-            
-        Raises:
-            BingWebmasterError: If country region settings cannot be removed
-        """
-        async with service as s:
-            return await s.regional.remove_country_region_settings(site_url=site_url, country=country, region=region) 
+    # URL Management Tools
+    get_query_parameters = wrap_service_method(mcp, service, 'urls', 'get_query_parameters')
+    add_query_parameter = wrap_service_method(mcp, service, 'urls', 'add_query_parameter')
+    remove_query_parameter = wrap_service_method(mcp, service, 'urls', 'remove_query_parameter')
+    enable_disable_query_parameter = wrap_service_method(mcp, service, 'urls', 'enable_disable_query_parameter')
