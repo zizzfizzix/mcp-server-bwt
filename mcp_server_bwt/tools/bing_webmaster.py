@@ -182,21 +182,30 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             return await s.submission.submit_url_batch(urls=urls)
     
     @mcp.tool()
-    async def submit_content(url: str, content: str) -> Dict[str, Any]:
-        """Submit content for a URL.
+    async def submit_content(site_url: str, url: str, http_message: str, structured_data: str, dynamic_serving: int) -> Dict[str, Any]:
+        """Submit content for a specific URL.
         
         Args:
-            url: The URL to submit content for
-            content: The content to submit
+            site_url: The URL of the site
+            url: The specific URL to submit content for
+            http_message: The HTTP message (base64 encoded)
+            structured_data: Structured data (base64 encoded)
+            dynamic_serving: Dynamic serving type (0-5)
             
         Returns:
             Dict[str, Any]: Result of the content submission
             
         Raises:
-            BingWebmasterError: If content cannot be submitted
+            BingWebmasterError: If content submission fails
         """
         async with service as s:
-            return await s.submission.submit_content(url=url, content=content)
+            return await s.submission.submit_content(
+                site_url=site_url,
+                url=url,
+                http_message=http_message,
+                structured_data=structured_data,
+                dynamic_serving=dynamic_serving
+            )
     
     @mcp.tool()
     async def submit_feed(site_url: str, feed_url: str) -> Dict[str, Any]:
