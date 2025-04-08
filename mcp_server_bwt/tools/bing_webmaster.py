@@ -625,11 +625,12 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     
     # Link Analysis Tools
     @mcp.tool()
-    async def get_link_counts(site_url: str) -> Dict[str, Any]:
+    async def get_link_counts(site_url: str, page: int = 0) -> Dict[str, Any]:
         """Get link counts for a site.
         
         Args:
             site_url: The URL of the site
+            page: The page number of results to retrieve (default: 0)
             
         Returns:
             Dict[str, Any]: Link counts data
@@ -638,15 +639,16 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If link counts cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_link_counts(site_url=site_url)
+            return await s.links.get_link_counts(site_url=site_url, page=page)
     
     @mcp.tool()
-    async def get_url_links(site_url: str, url: str) -> Dict[str, Any]:
-        """Get links for a URL.
+    async def get_url_links(site_url: str, link: str, page: int = 0) -> Dict[str, Any]:
+        """Get inbound links for a specific URL.
         
         Args:
             site_url: The URL of the site
-            url: The URL to get links for
+            link: The specific URL to get inbound links for
+            page: The page number of results to retrieve (default: 0)
             
         Returns:
             Dict[str, Any]: URL links data
@@ -655,15 +657,15 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If URL links cannot be retrieved
         """
         async with service as s:
-            return await s.links.get_url_links(site_url=site_url, url=url)
+            return await s.links.get_url_links(site_url=site_url, link=link, page=page)
     
     @mcp.tool()
     async def get_deep_link(site_url: str, url: str) -> Dict[str, Any]:
-        """Get deep link for a URL.
+        """Get deep links for a specific algo URL. (Deprecated)
         
         Args:
             site_url: The URL of the site
-            url: The URL to get deep link for
+            url: The specific URL to get deep links for
             
         Returns:
             Dict[str, Any]: Deep link data
@@ -691,12 +693,14 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             return await s.links.get_deep_link_blocks(site_url=site_url)
     
     @mcp.tool()
-    async def add_deep_link_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a deep link block for a site.
+    async def add_deep_link_block(site_url: str, market: str, search_url: str, deep_link_url: str) -> Dict[str, Any]:
+        """Add a deep link block.
         
         Args:
             site_url: The URL of the site
-            url: The URL to block
+            market: The market code
+            search_url: The search URL
+            deep_link_url: The deep link URL to block
             
         Returns:
             Dict[str, Any]: Result of the operation
@@ -705,15 +709,22 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If deep link block cannot be added
         """
         async with service as s:
-            return await s.links.add_deep_link_block(site_url=site_url, url=url)
+            return await s.links.add_deep_link_block(
+                site_url=site_url, 
+                market=market, 
+                search_url=search_url, 
+                deep_link_url=deep_link_url
+            )
     
     @mcp.tool()
-    async def remove_deep_link_block(site_url: str, url: str) -> Dict[str, Any]:
-        """Remove a deep link block for a site.
+    async def remove_deep_link_block(site_url: str, market: str, search_url: str, deep_link_url: str) -> Dict[str, Any]:
+        """Remove a deep link block.
         
         Args:
             site_url: The URL of the site
-            url: The URL to unblock
+            market: The market code
+            search_url: The search URL
+            deep_link_url: The deep link URL to unblock
             
         Returns:
             Dict[str, Any]: Result of the operation
@@ -722,16 +733,22 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If deep link block cannot be removed
         """
         async with service as s:
-            return await s.links.remove_deep_link_block(site_url=site_url, url=url)
+            return await s.links.remove_deep_link_block(
+                site_url=site_url, 
+                market=market, 
+                search_url=search_url, 
+                deep_link_url=deep_link_url
+            )
     
     @mcp.tool()
-    async def update_deep_link(site_url: str, url: str, deep_link: str) -> Dict[str, Any]:
-        """Update a deep link for a site.
+    async def update_deep_link(site_url: str, algo_url: str, deep_link: str, weight: str) -> Dict[str, Any]:
+        """Update deep link weight. (Deprecated)
         
         Args:
             site_url: The URL of the site
-            url: The URL to update deep link for
-            deep_link: The new deep link
+            algo_url: The algo URL
+            deep_link: The deep link URL
+            weight: The new weight for the deep link
             
         Returns:
             Dict[str, Any]: Result of the operation
@@ -740,11 +757,16 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If deep link cannot be updated
         """
         async with service as s:
-            return await s.links.update_deep_link(site_url=site_url, url=url, deep_link=deep_link)
+            return await s.links.update_deep_link(
+                site_url=site_url, 
+                algo_url=algo_url, 
+                deep_link=deep_link, 
+                weight=weight
+            )
     
     @mcp.tool()
     async def get_deep_link_algo_urls(site_url: str) -> Dict[str, Any]:
-        """Get deep link algorithm URLs for a site.
+        """Get algo URLs with deep links. (Deprecated)
         
         Args:
             site_url: The URL of the site
@@ -760,7 +782,7 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     
     @mcp.tool()
     async def get_connected_pages(site_url: str) -> Dict[str, Any]:
-        """Get connected pages for a site.
+        """Get a list of pages connected to the site.
         
         Args:
             site_url: The URL of the site
@@ -775,12 +797,12 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             return await s.links.get_connected_pages(site_url=site_url)
     
     @mcp.tool()
-    async def add_connected_page(site_url: str, url: str) -> Dict[str, Any]:
-        """Add a connected page for a site.
+    async def add_connected_page(site_url: str, master_url: str) -> Dict[str, Any]:
+        """Add a page which has a link to your website.
         
         Args:
-            site_url: The URL of the site
-            url: The URL to add as a connected page
+            site_url: The URL of your site
+            master_url: The URL of the page to be connected
             
         Returns:
             Dict[str, Any]: Result of the operation
@@ -789,7 +811,7 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             BingWebmasterError: If connected page cannot be added
         """
         async with service as s:
-            return await s.links.add_connected_page(site_url=site_url, url=url)
+            return await s.links.add_connected_page(site_url=site_url, master_url=master_url)
     
     # Content Management Tools
     @mcp.tool()
