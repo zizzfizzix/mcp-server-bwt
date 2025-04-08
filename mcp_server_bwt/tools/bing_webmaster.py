@@ -484,14 +484,14 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     
     # Crawling Tools
     @mcp.tool()
-    async def get_crawl_stats(site_url: str) -> Dict[str, Any]:
+    async def get_crawl_stats(site_url: str) -> List[Dict[str, Any]]:
         """Get crawl stats for a site.
         
         Args:
             site_url: The URL of the site
             
         Returns:
-            Dict[str, Any]: Crawl statistics data
+            List[Dict[str, Any]]: List of daily crawl statistics
             
         Raises:
             BingWebmasterError: If crawl stats cannot be retrieved
@@ -507,7 +507,7 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             site_url: The URL of the site
             
         Returns:
-            Dict[str, Any]: Crawl settings data
+            Dict[str, Any]: The current crawl settings for the site
             
         Raises:
             BingWebmasterError: If crawl settings cannot be retrieved
@@ -516,15 +516,15 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             return await s.crawling.get_crawl_settings(site_url=site_url)
     
     @mcp.tool()
-    async def save_crawl_settings(site_url: str, settings: Dict[str, Any]) -> Dict[str, Any]:
+    async def save_crawl_settings(site_url: str, settings: Dict[str, Any]) -> None:
         """Save crawl settings for a site.
         
         Args:
             site_url: The URL of the site
-            settings: The crawl settings to save
+            settings: The new crawl settings to apply
             
         Returns:
-            Dict[str, Any]: Result of the operation
+            None
             
         Raises:
             BingWebmasterError: If crawl settings cannot be saved
@@ -533,14 +533,14 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
             return await s.crawling.save_crawl_settings(site_url=site_url, settings=settings)
     
     @mcp.tool()
-    async def get_crawl_issues(site_url: str) -> Dict[str, Any]:
+    async def get_crawl_issues(site_url: str) -> List[Dict[str, Any]]:
         """Get crawl issues for a site.
         
         Args:
             site_url: The URL of the site
             
         Returns:
-            Dict[str, Any]: Crawl issues data
+            List[Dict[str, Any]]: List of URLs with their associated crawl issues
             
         Raises:
             BingWebmasterError: If crawl issues cannot be retrieved
