@@ -990,53 +990,51 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     
     # Regional Settings Tools
     @mcp.tool()
-    async def get_country_region_settings(site_url: str) -> Dict[str, Any]:
-        """Get country region settings for a site.
+    async def get_country_region_settings(site_url: str) -> List[Dict[str, Any]]:
+        """Retrieve country/region settings for a specific site.
         
         Args:
-            site_url: The URL of the site
+            site_url: The URL of the site to get settings for
             
         Returns:
-            Dict[str, Any]: Country region settings data
+            List[Dict[str, Any]]: List of country/region settings
             
         Raises:
-            BingWebmasterError: If country region settings cannot be retrieved
+            BingWebmasterError: If settings cannot be retrieved
         """
         async with service as s:
             return await s.regional.get_country_region_settings(site_url=site_url)
     
     @mcp.tool()
-    async def add_country_region_settings(site_url: str, country: str, region: str) -> Dict[str, Any]:
-        """Add country region settings for a site.
+    async def add_country_region_settings(site_url: str, settings: Dict[str, Any]) -> None:
+        """Add country/region settings for a specific site.
         
         Args:
             site_url: The URL of the site
-            country: The country code
-            region: The region code
+            settings: The country/region settings to add
             
         Returns:
-            Dict[str, Any]: Result of the operation
+            None
             
         Raises:
-            BingWebmasterError: If country region settings cannot be added
+            BingWebmasterError: If settings cannot be added
         """
         async with service as s:
-            return await s.regional.add_country_region_settings(site_url=site_url, country=country, region=region)
+            return await s.regional.add_country_region_settings(site_url=site_url, settings=settings)
     
     @mcp.tool()
-    async def remove_country_region_settings(site_url: str, country: str, region: str) -> Dict[str, Any]:
-        """Remove country region settings for a site.
+    async def remove_country_region_settings(site_url: str, settings: Dict[str, Any]) -> None:
+        """Remove country/region settings from a specific site.
         
         Args:
             site_url: The URL of the site
-            country: The country code
-            region: The region code
+            settings: The country/region settings to remove
             
         Returns:
-            Dict[str, Any]: Result of the operation
+            None
             
         Raises:
-            BingWebmasterError: If country region settings cannot be removed
+            BingWebmasterError: If settings cannot be removed
         """
         async with service as s:
-            return await s.regional.remove_country_region_settings(site_url=site_url, country=country, region=region) 
+            return await s.regional.remove_country_region_settings(site_url=site_url, settings=settings) 
