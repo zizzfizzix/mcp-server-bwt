@@ -78,7 +78,7 @@ def wrap_service_method(mcp: FastMCP, service: BingWebmasterService, service_att
 
 def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     # Site Management Tools
-    list_verified_sites = wrap_service_method(mcp, service, 'sites', 'get_sites')
+    get_sites = wrap_service_method(mcp, service, 'sites', 'get_sites')
     add_site = wrap_service_method(mcp, service, 'sites', 'add_site')
     verify_site = wrap_service_method(mcp, service, 'sites', 'verify_site')
     remove_site = wrap_service_method(mcp, service, 'sites', 'remove_site')
@@ -89,8 +89,8 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     submit_site_move = wrap_service_method(mcp, service, 'sites', 'submit_site_move')
     
     # Submission Tools
-    submit_url_for_indexing = wrap_service_method(mcp, service, 'submission', 'submit_url')
-    submit_urls_batch = wrap_service_method(mcp, service, 'submission', 'submit_url_batch')
+    submit_url = wrap_service_method(mcp, service, 'submission', 'submit_url')
+    submit_url_batch = wrap_service_method(mcp, service, 'submission', 'submit_url_batch')
     submit_content = wrap_service_method(mcp, service, 'submission', 'submit_content')
     submit_feed = wrap_service_method(mcp, service, 'submission', 'submit_feed')
     get_feeds = wrap_service_method(mcp, service, 'submission', 'get_feeds')
