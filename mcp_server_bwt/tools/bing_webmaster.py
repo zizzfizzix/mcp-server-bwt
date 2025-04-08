@@ -550,58 +550,78 @@ def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService):
     
     # Keyword Analysis Tools
     @mcp.tool()
-    async def get_keyword(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
-        """Get keyword data for a site.
+    async def get_keyword(query: str, country: str, language: str, start_date: str, end_date: str) -> Dict[str, Any]:
+        """Get keyword impressions for a selected period.
         
         Args:
-            site_url: The URL of the site
-            keyword: The keyword to get data for
-            language: The language code (default: "en")
+            query: The keyword query
+            country: The country code
+            language: The language code
+            start_date: The start date in YYYY-MM-DD format
+            end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict[str, Any]: Keyword data
+            Dict[str, Any]: Keyword impression data, or None if no data available
             
         Raises:
             BingWebmasterError: If keyword data cannot be retrieved
         """
         async with service as s:
-            return await s.keywords.get_keyword(site_url=site_url, keyword=keyword, language=language)
+            return await s.keywords.get_keyword(
+                query=query, 
+                country=country, 
+                language=language, 
+                start_date=start_date, 
+                end_date=end_date
+            )
     
     @mcp.tool()
-    async def get_keyword_stats(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
-        """Get keyword stats for a site.
+    async def get_keyword_stats(query: str, country: str, language: str) -> List[Dict[str, Any]]:
+        """Retrieve keyword statistics for a specific query.
         
         Args:
-            site_url: The URL of the site
-            keyword: The keyword to get stats for
-            language: The language code (default: "en")
+            query: The keyword query
+            country: The country code (i.e. gb)
+            language: The language and country code (i.e. en-GB)
             
         Returns:
-            Dict[str, Any]: Keyword statistics data
+            List[Dict[str, Any]]: List of keyword statistics
             
         Raises:
-            BingWebmasterError: If keyword stats cannot be retrieved
+            BingWebmasterError: If statistics cannot be retrieved
         """
         async with service as s:
-            return await s.keywords.get_keyword_stats(site_url=site_url, keyword=keyword, language=language)
+            return await s.keywords.get_keyword_stats(
+                query=query, 
+                country=country, 
+                language=language
+            )
     
     @mcp.tool()
-    async def get_related_keywords(site_url: str, keyword: str, language: str = "en") -> Dict[str, Any]:
-        """Get related keywords for a site.
+    async def get_related_keywords(query: str, country: str, language: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+        """Get keyword impressions for related keywords in the selected period.
         
         Args:
-            site_url: The URL of the site
-            keyword: The keyword to get related keywords for
-            language: The language code (default: "en")
+            query: The base keyword query
+            country: The country code
+            language: The language code
+            start_date: The start date in YYYY-MM-DD format
+            end_date: The end date in YYYY-MM-DD format
             
         Returns:
-            Dict[str, Any]: Related keywords data
+            List[Dict[str, Any]]: List of related keywords and their impression data
             
         Raises:
             BingWebmasterError: If related keywords cannot be retrieved
         """
         async with service as s:
-            return await s.keywords.get_related_keywords(site_url=site_url, keyword=keyword, language=language)
+            return await s.keywords.get_related_keywords(
+                query=query, 
+                country=country, 
+                language=language, 
+                start_date=start_date, 
+                end_date=end_date
+            )
     
     # Link Analysis Tools
     @mcp.tool()
