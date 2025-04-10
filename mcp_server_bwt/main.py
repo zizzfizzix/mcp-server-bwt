@@ -16,5 +16,9 @@ bing_service = BingWebmasterService(api_key=api_key)
 # Add the tools to the MCP server
 add_bing_webmaster_tools(mcp, bing_service)
 
-if __name__ == "__main__":
+def app():
+    """Command-line interface entry point."""
     mcp.run(transport="stdio")
+
+if __name__ == "__main__":
+    app()
