@@ -1,22 +1,22 @@
+.PHONY: install lint format test build deploy ship_it start mcp_inspector clean
+
 install:
-	chmod +x ./scripts/install.sh
-	./scripts/install.sh
+	uv sync
 
 lint:
-	. .venv/bin/activate; python -m mypy --strict mcp_server_bwt/
-	. .venv/bin/activate; python -m ruff check mcp_server_bwt/
+	uv run mypy --strict mcp_server_bwt/
+	uv run ruff check --fix mcp_server_bwt/
 
 format:
-	. .venv/bin/activate; python -m ruff format mcp_server_bwt/
+	uv run ruff format mcp_server_bwt/
 
 test:
-	. .venv/bin/activate; python -m pytest mcp_server_bwt \
+	uv run pytest mcp_server_bwt \
 		--doctest-modules \
 		--junitxml=reports/test-results-$(shell cat .python-version).xml
 
-.PHONY: build
 build: clean
-	. .venv/bin/activate; python -m build
+	uv run build
 
 deploy: install build
 

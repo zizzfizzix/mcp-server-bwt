@@ -24,24 +24,79 @@ Claude will use the appropriate MCP tools to fulfill your requests.
 
 ## Installation
 
-To install project dependencies, run the following command:
+### Using uvx (recommended)
+
+When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installation is needed. We will use it to directly run *mcp_server_bwt* from the client app.
+
+#### Add to Claude desktop with uvx
+
+[In your Claude config](https://modelcontextprotocol.io/quickstart/user#2-add-the-filesystem-mcp-server) specify:
+
+```json
+"mcpServers": {
+  "mcp_server_bwt": {
+    "command": "uvx",
+    "args": [
+      "--from",
+      "git+https://github.com/zizzfizzix/mcp-server-bwt",
+      "mcp_server_bwt"
+    ]
+  }
+}
+```
+
+#### Add to Zed with uvx
+
+In your Zed settings.json add:
+
+```json
+"context_servers": [
+  "bwtServer": {
+    "command": "uvx",
+    "args": [
+      "--from",
+      "git+https://github.com/zizzfizzix/mcp-server-bwt",
+      "mcp_server_bwt"
+    ]
+  }
+]
+```
+
+### Using make
+
+Alternatively you can install `mcp_server_bwt` using make:
+
 ```bash
 make install
 ```
 
-### MCP Client Configuration Example (Claude, Cursor, etc.)
+#### Add to Claude desktop with make
 
-For Claude or other MCP clients, you can [configure the server in your settings](https://modelcontextprotocol.io/quickstart/user):
+[In your Claude config](https://modelcontextprotocol.io/quickstart/user#2-add-the-filesystem-mcp-server) specify:
 
 ```json
-{
-  "mcpServers": {
-    "bwtServer": {
-      "command": "/PATH/TO/mcp-server-bwt/.venv/bin/python",
-      "args": ["/PATH/TO/mcp-server-bwt/mcp_server_bwt/main.py"],
-      "env": {
-        "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
-      }
+"mcpServers": {
+  "bwtServer": {
+    "command": "/PATH/TO/mcp-server-bwt/.venv/bin/python",
+    "args": ["/PATH/TO/mcp-server-bwt/mcp_server_bwt/main.py"],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
+  }
+}
+```
+
+#### Add to Zed with make
+
+In your Zed settings.json add:
+
+```json
+"context_servers": {
+  "bwtServer": {
+    "command": "/PATH/TO/mcp-server-bwt/.venv/bin/python",
+    "args": ["/PATH/TO/mcp-server-bwt/mcp_server_bwt/main.py"],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
     }
   }
 }
@@ -52,6 +107,7 @@ For Claude or other MCP clients, you can [configure the server in your settings]
 The server provides the following Bing Webmaster Tools API functionality (more info in the [API docs](https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces?view=bing-webmaster-dotnet)):
 
 ### Site Management
+
 - `get_sites`: List all verified sites in your Bing Webmaster Tools account
 - `add_site`: Add a new site to your account
 - `verify_site`: Verify ownership of a site
@@ -63,6 +119,7 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 - `submit_site_move`: Submit a site move request
 
 ### URL Submission
+
 - `submit_url`: Submit a single URL for indexing
 - `submit_url_batch`: Submit multiple URLs for indexing in a batch
 - `submit_content`: Submit content for indexing
@@ -77,6 +134,7 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 - `get_fetched_url_details`: Get details about a specific fetched URL
 
 ### Traffic Analysis
+
 - `get_query_stats`: Get statistics for search queries
 - `get_query_traffic_stats`: Get traffic statistics for search queries
 - `get_query_page_stats`: Get page statistics for search queries
@@ -86,17 +144,20 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 - `get_rank_and_traffic_stats`: Get rank and traffic statistics
 
 ### Crawling
+
 - `get_crawl_stats`: Get crawling statistics
 - `get_crawl_settings`: Get crawling settings
 - `save_crawl_settings`: Save crawling settings
 - `get_crawl_issues`: Get crawling issues
 
 ### Keyword Analysis
+
 - `get_keyword`: Get information about a keyword
 - `get_keyword_stats`: Get statistics for a keyword
 - `get_related_keywords`: Get related keywords
 
 ### Link Analysis
+
 - `get_link_counts`: Get link counts
 - `get_url_links`: Get links for a URL
 - `get_deep_link`: Get deep link information
@@ -109,12 +170,14 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 - `add_connected_page`: Add a connected page
 
 ### Content Management
+
 - `get_url_info`: Get information about a URL
 - `get_url_traffic_info`: Get traffic information for a URL
 - `get_children_url_info`: Get information about child URLs
 - `get_children_url_traffic_info`: Get traffic information for child URLs
 
 ### Content Blocking
+
 - `get_blocked_urls`: Get blocked URLs
 - `add_blocked_url`: Add a URL to the blocked list
 - `remove_blocked_url`: Remove a URL from the blocked list
@@ -123,11 +186,13 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 - `remove_page_preview_block`: Remove a page preview block
 
 ### Regional Settings
+
 - `get_country_region_settings`: Get country/region settings
 - `add_country_region_settings`: Add country/region settings
 - `remove_country_region_settings`: Remove country/region settings
 
 ### URL Management
+
 - `get_query_parameters`: Get query parameters
 - `add_query_parameter`: Add a query parameter
 - `remove_query_parameter`: Remove a query parameter
@@ -136,21 +201,25 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 ## Development
 
 To run all tests:
+
 ```bash
 make test
 ```
 
 To build the app:
+
 ```bash
 make build
 ```
 
 To lint the project:
+
 ```bash
 make lint
 ```
 
 To format the project:
+
 ```bash
 make format
 ```
@@ -164,6 +233,7 @@ The following environment variables are required:
 ### Starting the Server
 
 To start the MCP server:
+
 ```bash
 make start
 ```
@@ -171,10 +241,19 @@ make start
 ### MCP Inspector
 
 You can use the MCP inspector to test the server:
+
 ```bash
 make mcp_inspector
 ```
 
+### Creating from Template
+
+This MCP server was created from a cookiecutter template. To create a similar one, run:
+
+```bash
+uvx cookiecutter gh:zizzfizzix/python-base-mcp-server
+```
+
 ## License
 
-MIT
+mcp-server-bwt is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.

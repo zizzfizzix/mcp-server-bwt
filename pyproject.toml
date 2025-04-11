@@ -19,15 +19,15 @@ classifiers = [
 ]
 
 dependencies = [
-    "mcp==1.6.0",
-    "bing-webmaster-tools==1.1.2"
+    "mcp[cli]",
+    "bing-webmaster-tools"
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "mypy==1.13.0",
-    "pytest==8.3.4",
-    "ruff==0.8.3"
+    "mypy",
+    "pytest",
+    "ruff"
 ]
 
 [tool.hatch.build.targets.wheel]
