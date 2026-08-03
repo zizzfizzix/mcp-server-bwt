@@ -1,7 +1,7 @@
 from typing import Any, Callable, TypeVar
 from functools import wraps
 import inspect
-from mcp.server.fastmcp import FastMCP
+from mcp_server_bwt._mcp_compat import FastMCP
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 from bing_webmaster_tools.services import (
     site_management,
