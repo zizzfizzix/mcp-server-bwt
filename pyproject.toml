@@ -40,6 +40,7 @@ path = "mcp_server_bwt/version.py"
 
 [project.scripts]
 mcp-server-bwt = "mcp_server_bwt.main:app"
+mcp_server_bwt = "mcp_server_bwt.main:app"
 
 [tool.pytest.ini_options]
 pythonpath = "."
