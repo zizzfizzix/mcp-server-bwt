@@ -1,20 +1,25 @@
-from typing import Any, Callable, TypeVar
-from functools import wraps
 import inspect
-from mcp.server.fastmcp import FastMCP
-from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
+from collections.abc import Callable
+from datetime import datetime, timezone
+from functools import wraps
+from typing import Any, TypeVar
+
 from bing_webmaster_tools.services import (
-    site_management,
-    submission,
-    traffic_analysis,
+    content_blocking,
+    content_management,
     crawling,
     keyword_analysis,
     link_analysis,
-    content_management,
-    content_blocking,
     regional_settings,
+    site_management,
+    submission,
+    traffic_analysis,
     url_management,
 )
+from mcp.server.fastmcp import FastMCP
+from pydantic import BaseModel
+
+from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 
 T = TypeVar("T")
 
@@ -31,6 +36,27 @@ SERVICE_CLASSES = {
     "regional": regional_settings.RegionalSettingsService,
     "urls": url_management.UrlManagementService,
 }
+
+
+def sanitize_dates(obj: Any) -> Any:
+    """Recursively convert any naive datetime objects to UTC timezone-aware datetimes."""
+    if isinstance(obj, datetime):
+        if obj.tzinfo is None:
+            return obj.replace(tzinfo=timezone.utc)
+        return obj
+    elif isinstance(obj, list):
+        return [sanitize_dates(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {k: sanitize_dates(v) for k, v in obj.items()}
+    elif isinstance(obj, BaseModel):
+        for field_name in type(obj).model_fields:
+            val = getattr(obj, field_name, None)
+            if isinstance(val, datetime) and val.tzinfo is None:
+                setattr(obj, field_name, val.replace(tzinfo=timezone.utc))
+            elif isinstance(val, (list, dict, BaseModel)):
+                setattr(obj, field_name, sanitize_dates(val))
+        return obj
+    return obj
 
 
 def wrap_service_method(
@@ -71,7 +97,8 @@ def wrap_service_method(
             # Get the method from the instance
             method = getattr(service_obj, method_name)
             # Call the method directly - it's already bound to the instance
-            return await method(*args, **kwargs)
+            res = await method(*args, **kwargs)
+            return sanitize_dates(res)
 
     # Copy signature and docstring
     wrapper.__signature__ = new_sig  # type: ignore

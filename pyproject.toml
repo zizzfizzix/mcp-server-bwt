@@ -6,10 +6,11 @@ build-backend = "hatchling.build"
 name = "mcp-server-bwt"
 authors = [
   { name = "Kuba Serafinowski" },
+  { name = "Andrea Galliani" },
 ]
-description = "MCP server for Bing Webmaster Tools"
+description = "MCP server for Bing Webmaster Tools (fixed for ISO 8601 UTC dates and MCP v1/v2 compatibility)"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dynamic = ["version"]
 
 classifiers = [
@@ -19,15 +20,16 @@ classifiers = [
 ]
 
 dependencies = [
-    "mcp[cli]",
-    "bing-webmaster-tools"
+    "mcp[cli]>=1.2.0,<2.0.0",
+    "bing-webmaster-tools>=1.2.0",
 ]
 
 [dependency-groups]
 dev = [
     "mypy",
     "pytest",
-    "ruff"
+    "pytest-asyncio>=1.4.0",
+    "ruff",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -40,10 +42,10 @@ path = "mcp_server_bwt/version.py"
 mcp-server-bwt = "mcp_server_bwt.main:app"
 
 [tool.pytest.ini_options]
-pythonpath = "mcp_server_bwt"
+pythonpath = "."
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 exclude = [

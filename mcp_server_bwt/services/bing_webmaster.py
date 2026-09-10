@@ -1,27 +1,29 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Any
-from pydantic import SecretStr
+from types import TracebackType
+
 from bing_webmaster_tools import BingWebmasterClient, Settings
 from bing_webmaster_tools.services import (
-    site_management,
-    submission,
-    traffic_analysis,
+    content_blocking,
+    content_management,
     crawling,
     keyword_analysis,
     link_analysis,
-    content_management,
-    content_blocking,
     regional_settings,
+    site_management,
+    submission,
+    traffic_analysis,
     url_management,
 )
+from pydantic import SecretStr
+from typing_extensions import Self
 
 
 @dataclass
 class SiteInfo:
     site_url: str
-    last_crawl_date: Optional[str] = None
+    last_crawl_date: str | None = None
     crawl_allowed: bool = True
-    sitemaps: List[str] = field(default_factory=list)
+    sitemaps: list[str] = field(default_factory=list)
 
 
 class BingWebmasterService:
@@ -35,9 +37,9 @@ class BingWebmasterService:
             rate_limit_period=1,
             disable_destructive_operations=False,
         )
-        self.client: Optional[BingWebmasterClient] = None
+        self.client: BingWebmasterClient | None = None
 
-    async def __aenter__(self) -> "BingWebmasterService":
+    async def __aenter__(self) -> Self:
         self.client = BingWebmasterClient(self.settings)
         await self.client.__aenter__()
 
@@ -56,9 +58,9 @@ class BingWebmasterService:
 
     async def __aexit__(
         self,
-        exc_type: Optional[type],
-        exc_val: Optional[Exception],
-        exc_tb: Optional[Any],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         if self.client:
             await self.client.__aexit__(exc_type, exc_val, exc_tb)
