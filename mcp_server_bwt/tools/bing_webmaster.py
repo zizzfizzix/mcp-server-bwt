@@ -86,7 +86,6 @@ def wrap_service_method(
     new_sig = sig.replace(parameters=parameters)
 
     # Create wrapper function with same signature
-    @mcp.tool()
     @wraps(original_method)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         # Filter out any 'self' arguments that might be passed by the MCP client
@@ -100,11 +99,11 @@ def wrap_service_method(
             res = await method(*args, **kwargs)
             return sanitize_dates(res)
 
-    # Copy signature and docstring
+    # Copy signature and docstring BEFORE registering with FastMCP
     wrapper.__signature__ = new_sig  # type: ignore
     wrapper.__doc__ = original_method.__doc__
 
-    return wrapper
+    return mcp.tool()(wrapper)
 
 
 def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService) -> None:
