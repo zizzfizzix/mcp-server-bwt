@@ -43,7 +43,7 @@ These rules apply to every PR in `mcp-server-bwt`, whether a human or `om-code-r
 
 ### Tests
 
-- The repo has no tests yet. PRs that add behavior beyond straight registration (custom tools, argument transformation, error handling) should add pytest tests under `mcp_server_bwt/`. Mock the upstream client; tests must not hit the live Bing API.
+- PRs that add behavior beyond straight registration (custom tools, argument transformation, error handling) should add pytest tests under `mcp_server_bwt/`. Mock the upstream client; tests must not hit the live Bing API.
 
 ## Validation gate
 
