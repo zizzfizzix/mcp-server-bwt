@@ -11,12 +11,12 @@ format:
 	uv run ruff format mcp_server_bwt/
 
 test:
-	uv run pytest mcp_server_bwt \
+	BING_WEBMASTER_API_KEY=$${BING_WEBMASTER_API_KEY:-dummy} uv run pytest mcp_server_bwt \
 		--doctest-modules \
 		--junitxml=reports/test-results-$(shell cat .python-version).xml
 
 build: clean
-	uv run build
+	uv build
 
 deploy: install build
 

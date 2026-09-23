@@ -26,7 +26,7 @@ Claude will use the appropriate MCP tools to fulfill your requests.
 
 ### Using uvx (recommended)
 
-When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installation is needed. We will use it to directly run *mcp_server_bwt* from the client app.
+When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installation is needed. We will use it to directly run `mcp-server-bwt` from the client app.
 
 #### Add to Claude desktop with uvx
 
@@ -39,8 +39,11 @@ When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installa
     "args": [
       "--from",
       "git+https://github.com/zizzfizzix/mcp-server-bwt",
-      "mcp_server_bwt"
-    ]
+      "mcp-server-bwt"
+    ],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
   }
 }
 ```
@@ -50,16 +53,19 @@ When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installa
 In your Zed settings.json add:
 
 ```json
-"context_servers": [
+"context_servers": {
   "bwtServer": {
     "command": "uvx",
     "args": [
       "--from",
       "git+https://github.com/zizzfizzix/mcp-server-bwt",
-      "mcp_server_bwt"
-    ]
+      "mcp-server-bwt"
+    ],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
   }
-]
+}
 ```
 
 ### Using make
