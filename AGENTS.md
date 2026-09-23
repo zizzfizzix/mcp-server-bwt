@@ -1,0 +1,37 @@
+# AGENTS.md
+
+## Project overview
+
+`mcp-server-bwt` is a Python 3.13 MCP (Model Context Protocol) server that connects AI assistants to the Bing Webmaster Tools API. It runs over stdio (`FastMCP`, `mcp[cli]`) and exposes the service methods of the [`bing-webmaster-tools`](https://github.com/merj/bing-webmaster-tools) client library as MCP tools. There are 62 today, covering site management, submission, traffic, crawling, keywords, links, content, blocking, regional settings and URL parameters. It is packaged with hatchling, managed with uv, and published as the `mcp-server-bwt` console script, which is meant to be launched through `uvx`.
+
+## Task routing
+
+| When the task involves… | Read first | Key rules |
+|---|---|---|
+| Server startup, env config, entry point | `mcp_server_bwt/main.py`, `pyproject.toml` (`[project.scripts]`) | `BING_WEBMASTER_API_KEY` is read at import time and a missing value raises `ValueError`. `app()` is the console-script target and must keep `transport="stdio"`. Never log or echo the API key. |
+| Adding, removing or renaming an MCP tool | `mcp_server_bwt/tools/bing_webmaster.py`, `README.md` (`## Available Tools`) | Register tools only through `wrap_service_method(mcp, service, "<service_attr>", "<method>")` and assign the result to a variable named after the method with `# noqa: F841`. Keep tools grouped under the `# <Area> Tools` comments. Tool names, signatures and docstrings come from the upstream library method, so don't hand-write them. Update the README tool list in the same PR. Renaming or removing a tool is a breaking change (see `BACKWARD_COMPATIBILITY.md`). |
+| A new upstream service area | `mcp_server_bwt/tools/bing_webmaster.py` (`SERVICE_CLASSES`), `mcp_server_bwt/services/bing_webmaster.py` (`__aenter__`) | Add the service class to `SERVICE_CLASSES` and instantiate it on the same attribute name in `BingWebmasterService.__aenter__`. The two maps must stay in sync. |
+| API client settings (timeouts, retries, rate limits, base URL) | `mcp_server_bwt/services/bing_webmaster.py` | Settings are built in `BingWebmasterService.__init__`. The key is wrapped in `pydantic.SecretStr`. Each tool call opens and closes the client through `async with service`. `disable_destructive_operations=False` is deliberate, so destructive tools (remove site, remove feed, …) are exposed. |
+| Dependencies and packaging | `pyproject.toml`, `mcp_server_bwt/version.py` | `uv.lock` is currently gitignored, so dependency versions float, and an unpinned `mcp[cli]` resolves to 2.x, which breaks the server (#8). The version is sourced from `mcp_server_bwt/version.py` (`__VERSION__`) via `[tool.hatch.version]`. Add dev tools to `[dependency-groups].dev`. `requires-python` is `>=3.13`. |
+| Tests | `pyproject.toml` (`[tool.pytest.ini_options]`), `Makefile` (`test`) | There are no tests yet. pytest runs over `mcp_server_bwt` with `--doctest-modules`, and `pythonpath = "mcp_server_bwt"`. mypy excludes files matching `.+test_`. TODO: settle a test file layout once the first tests land, then add pytest to the validation gate. |
+| Tooling, lint, types | `Makefile`, `pyproject.toml` (`[tool.mypy]`) | Code must pass `mypy --strict` and ruff (lint and format, default config). Every function carries full type annotations. Use `# type: ignore` only where the dynamic wrapping genuinely requires it. |
+| CI | none | TODO: there is no `.github/workflows/`. The validation gate below is the only automated check. |
+| Docs | `README.md` | The README documents client setup (Claude Desktop, Zed, via uvx or a local venv) and the full tool list. Keep both accurate when behavior changes. |
+
+## Validation gate
+
+Run in order. Any non-zero exit fails the gate:
+
+1. `uv run ruff check mcp_server_bwt/`
+2. `uv run ruff format --check mcp_server_bwt/`
+3. `uv run mypy --strict mcp_server_bwt/`
+4. `uv build`
+
+Use `make format` or `uv run ruff check --fix` to fix drift locally. `make lint` runs `ruff --fix` and changes files, so it isn't used as the gate.
+
+## Pointers
+
+- Delivery process, labels, claim protocol: `SDLC.md`
+- Review rules: `CODE_REVIEW.md`
+- Protected contract surfaces: `BACKWARD_COMPATIBILITY.md`
+- Pipeline config: `.ai/agentic.config.json` (tracker descriptor in `.ai/trackers/github.md`)
