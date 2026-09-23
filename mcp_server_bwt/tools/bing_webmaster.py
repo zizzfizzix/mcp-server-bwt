@@ -1,20 +1,23 @@
-from typing import Any, Callable, TypeVar
-from functools import wraps
 import inspect
-from mcp.server.fastmcp import FastMCP
-from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
+from collections.abc import Callable
+from functools import wraps
+from typing import Any, TypeVar
+
 from bing_webmaster_tools.services import (
-    site_management,
-    submission,
-    traffic_analysis,
+    content_blocking,
+    content_management,
     crawling,
     keyword_analysis,
     link_analysis,
-    content_management,
-    content_blocking,
     regional_settings,
+    site_management,
+    submission,
+    traffic_analysis,
     url_management,
 )
+from mcp.server.fastmcp import FastMCP
+
+from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 
 T = TypeVar("T")
 
