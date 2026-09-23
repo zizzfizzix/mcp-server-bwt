@@ -35,6 +35,8 @@ Land the agent-pipeline setup that `om-setup-agent-pipeline` produced on `cez/7d
 
 ## Progress
 
+PR: #12
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Land the setup
