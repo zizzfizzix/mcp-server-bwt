@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "mcp[cli]",
+    "mcp[cli]>=1.2,<2",
     "bing-webmaster-tools"
 ]
 
