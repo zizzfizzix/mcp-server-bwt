@@ -1,5 +1,7 @@
 import os
+
 from mcp.server.fastmcp import FastMCP
+
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 from mcp_server_bwt.tools.bing_webmaster import add_bing_webmaster_tools
 
