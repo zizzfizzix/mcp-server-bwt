@@ -65,12 +65,8 @@ def wrap_service_method(
     new_sig = sig.replace(parameters=parameters)
 
     # Create wrapper function with same signature
-    @mcp.tool()
     @wraps(original_method)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        # Filter out any 'self' arguments that might be passed by the MCP client
-        kwargs = {k: v for k, v in kwargs.items() if k != "self"}
-
         async with service as s:
             service_obj = getattr(s, service_attr)
             # Get the method from the instance
@@ -83,9 +79,12 @@ def wrap_service_method(
                 # ValueError includes pydantic.ValidationError
                 raise ToolError(str(exc)) from exc
 
-    # Copy signature and docstring
+    # Copy signature and docstring before registering, because mcp.tool()
+    # builds the tool's input schema from them when it is applied (#10)
     wrapper.__signature__ = new_sig  # type: ignore
     wrapper.__doc__ = original_method.__doc__
+
+    mcp.tool()(wrapper)
 
     return wrapper
 

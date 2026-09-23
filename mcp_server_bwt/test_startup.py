@@ -29,6 +29,39 @@ def test_server_imports_and_lists_all_tools(monkeypatch: pytest.MonkeyPatch) -> 
     assert len(tools) == EXPECTED_TOOL_COUNT
 
 
+def test_tool_schemas_do_not_expose_self(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression for #10: input schemas list only the upstream parameters, minus `self`."""
+    monkeypatch.setenv("BING_WEBMASTER_API_KEY", "dummy")
+    main = importlib.import_module("mcp_server_bwt.main")
+
+    tools = {tool.name: tool for tool in asyncio.run(main.mcp.list_tools())}
+
+    for tool in tools.values():
+        assert "self" not in tool.input_schema["properties"], tool.name
+        assert "self" not in tool.input_schema.get("required", []), tool.name
+    assert tools["submit_url"].input_schema["required"] == ["site_url", "url"]
+    assert "required" not in tools["get_sites"].input_schema
+    assert tools["get_sites"].description
+
+
+def test_legacy_self_argument_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression for #10: clients that still send `self` from the old schema keep working."""
+    monkeypatch.setenv("BING_WEBMASTER_API_KEY", "dummy")
+    main = importlib.import_module("mcp_server_bwt.main")
+
+    async def fake_request(
+        self: BingWebmasterClient, *args: Any, **kwargs: Any
+    ) -> dict[str, Any]:
+        return {"d": [SITE]}
+
+    monkeypatch.setattr(BingWebmasterClient, "request", fake_request)
+
+    sites = asyncio.run(main.mcp.call_tool("get_sites", {"self": ""}))
+
+    assert not sites.is_error
+    assert sites.structured_content == {"result": [SITE]}
+
+
 def test_tool_calls_reach_the_client(monkeypatch: pytest.MonkeyPatch) -> None:
     """Regression for #14: tool calls on mcp 2.x pass arguments through and return results."""
     monkeypatch.setenv("BING_WEBMASTER_API_KEY", "dummy")
@@ -48,18 +81,16 @@ def test_tool_calls_reach_the_client(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(BingWebmasterClient, "request", fake_request)
 
-    # Every schema still marks `self` as required (#10), so clients have to send it.
     submitted = asyncio.run(
         main.mcp.call_tool(
             "submit_url",
             {
-                "self": "",
                 "site_url": "https://example.com/",
                 "url": "https://example.com/a",
             },
         )
     )
-    sites = asyncio.run(main.mcp.call_tool("get_sites", {"self": ""}))
+    sites = asyncio.run(main.mcp.call_tool("get_sites", {}))
 
     assert requests == [
         (
@@ -88,7 +119,7 @@ def test_upstream_errors_reach_the_client(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(BingWebmasterClient, "request", failing_request)
 
     with pytest.raises(ToolError) as excinfo:
-        asyncio.run(main.mcp.call_tool("get_sites", {"self": ""}))
+        asyncio.run(main.mcp.call_tool("get_sites", {}))
 
     assert not isinstance(excinfo.value, UnexpectedToolError)
     assert str(excinfo.value) == "Error executing tool get_sites: Invalid API key"
@@ -108,12 +139,10 @@ def test_upstream_argument_checks_reach_the_client(
 
     with pytest.raises(ToolError) as empty_batch:
         asyncio.run(
-            main.mcp.call_tool(
-                "submit_url_batch", {"self": "", "site_url": "a", "url_list": []}
-            )
+            main.mcp.call_tool("submit_url_batch", {"site_url": "a", "url_list": []})
         )
     with pytest.raises(ToolError) as bad_site:
-        asyncio.run(main.mcp.call_tool("get_sites", {"self": ""}))
+        asyncio.run(main.mcp.call_tool("get_sites", {}))
 
     assert not isinstance(empty_batch.value, UnexpectedToolError)
     assert str(empty_batch.value) == (
