@@ -171,6 +171,7 @@ cython_debug/
 
 # Generated
 uv.lock
+
 # Agent pipeline: per-run QA state (generated, not source)
 .ai/qa/artifacts_*/
 .ai/qa/test-env.json

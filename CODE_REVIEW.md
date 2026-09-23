@@ -16,7 +16,7 @@ These rules apply to every PR in `mcp-server-bwt`, whether a human or `om-code-r
 - Every new tool is registered through `wrap_service_method`, not a hand-written `@mcp.tool()` function, unless the PR explains why the generic wrapper can't express it.
 - `service_attr` must be a key of `SERVICE_CLASSES`, and `method_name` must exist on that class in the pinned upstream version. A typo only fails at server start (`AttributeError` or `KeyError` at import), so make sure the author started the server or the inspector (`make start` / `make mcp_inspector`).
 - A new `SERVICE_CLASSES` entry has a matching attribute set in `BingWebmasterService.__aenter__` (`mcp_server_bwt/services/bing_webmaster.py`) under the same name.
-- The wrapper keeps the upstream signature minus `self` (`__signature__`) and the upstream docstring, which MCP clients see as the tool schema and description. Changes to this signature rewriting affect every tool at once, so treat them as `risk-high`.
+- The wrapper must expose the upstream signature minus `self` (`__signature__`) and the upstream docstring, which MCP clients see as the tool schema and description. Today every schema still includes `self`, because `@mcp.tool()` runs before `__signature__` is assigned (#10). Don't approve changes that assume this invariant already holds. Changes to this signature rewriting affect every tool at once, so treat them as `risk-high`.
 - A tool that is added, removed or renamed is reflected in the README `## Available Tools` section in the same PR.
 
 ### Service and client lifecycle (`mcp_server_bwt/services/bing_webmaster.py`)
