@@ -2,6 +2,7 @@
 
 install:
 	uv sync
+	uv run lefthook install
 
 lint:
 	uv run mypy --strict mcp_server_bwt/
