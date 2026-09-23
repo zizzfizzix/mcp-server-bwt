@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import inspect
 import json
 from typing import Any
 
@@ -7,6 +8,8 @@ import pytest
 from bing_webmaster_tools import BingWebmasterClient
 from bing_webmaster_tools.errors import BingWebmasterError
 from mcp.server.mcpserver.exceptions import ToolError, UnexpectedToolError
+
+from mcp_server_bwt.tools.bing_webmaster import SERVICE_CLASSES
 
 EXPECTED_TOOL_COUNT = 62
 
@@ -34,14 +37,22 @@ def test_tool_schemas_do_not_expose_self(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("BING_WEBMASTER_API_KEY", "dummy")
     main = importlib.import_module("mcp_server_bwt.main")
 
-    tools = {tool.name: tool for tool in asyncio.run(main.mcp.list_tools())}
+    tools = asyncio.run(main.mcp.list_tools())
 
-    for tool in tools.values():
-        assert "self" not in tool.input_schema["properties"], tool.name
-        assert "self" not in tool.input_schema.get("required", []), tool.name
-    assert tools["submit_url"].input_schema["required"] == ["site_url", "url"]
-    assert "required" not in tools["get_sites"].input_schema
-    assert tools["get_sites"].description
+    for tool in tools:
+        # First match wins: `submit_content` exists on two services and is
+        # registered from "submission", which comes first in SERVICE_CLASSES
+        method = next(
+            getattr(cls, tool.name)
+            for cls in SERVICE_CLASSES.values()
+            if hasattr(cls, tool.name)
+        )
+        params = list(inspect.signature(method).parameters.values())[1:]
+        required = [p.name for p in params if p.default is inspect.Parameter.empty]
+        assert list(tool.input_schema["properties"]) == [p.name for p in params]
+        assert tool.input_schema.get("required", []) == required, tool.name
+        description = inspect.cleandoc(method.__doc__ or "")
+        assert (tool.description or "").strip() == description, tool.name
 
 
 def test_legacy_self_argument_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
