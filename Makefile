@@ -1,7 +1,9 @@
 .PHONY: install lint format test build deploy ship_it start mcp_inspector clean
 
+# Git hooks (lefthook.yml) are installed only inside a git checkout, not in tarballs or deploy images.
 install:
 	uv sync
+	if git rev-parse --git-dir >/dev/null 2>&1; then uv run lefthook install; fi
 
 lint:
 	uv run mypy --strict mcp_server_bwt/

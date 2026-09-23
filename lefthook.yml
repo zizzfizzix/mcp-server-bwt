@@ -1,0 +1,30 @@
+# Git hooks that run the fast validation-gate commands (AGENTS.md → Validation gate).
+# Installed by `make install`. Skip with `git commit --no-verify` / `git push --no-verify`
+# or `LEFTHOOK=0`.
+
+pre-commit:
+  jobs:
+    - name: ruff
+      glob: "*.py"
+      # Fix before format, sequentially, so the two never write the same file at once.
+      # stage_fixed must sit on each sub-job: on the group it is ignored.
+      group:
+        piped: true
+        jobs:
+          - name: ruff check --fix
+            run: uv run ruff check --fix {staged_files}
+            stage_fixed: true
+          - name: ruff format
+            run: uv run ruff format {staged_files}
+            stage_fixed: true
+
+# pre-push jobs see the files changed against @{push}. On a branch's first push that falls
+# back to the local default branch (`main`). With no changes, lefthook skips the jobs.
+pre-push:
+  parallel: true
+  jobs:
+    - name: mypy
+      run: uv run mypy --strict mcp_server_bwt/
+    - name: uv lock --check
+      glob: ["pyproject.toml", "uv.lock"]
+      run: uv lock --check

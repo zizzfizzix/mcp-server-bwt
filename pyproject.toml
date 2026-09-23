@@ -25,9 +25,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "lefthook>=2.1.14",
     "mypy",
     "pytest",
-    "ruff"
+    "ruff",
 ]
 
 [tool.hatch.build.targets.wheel]
