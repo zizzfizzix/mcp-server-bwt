@@ -51,3 +51,4 @@ PR: #22
 - [x] 2.1 AGENTS.md release and CI rows — 23ba6c7
 - [x] 2.2 SDLC.md releasing note — b8e471e
 - [x] 2.3 BACKWARD_COMPATIBILITY.md version-bump path — 2a3a931
+- [x] Post-review fix: CODE_REVIEW.md still told reviewers to hand-edit version.py — b74017b
