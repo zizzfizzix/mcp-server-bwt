@@ -36,16 +36,18 @@ Merging a release-please release PR bumps `mcp_server_bwt/version.py`, updates `
 
 ## Progress
 
+PR: #22
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Release automation
 
-- [ ] 1.1 Add release-please config and manifest
-- [ ] 1.2 Annotate version line
-- [ ] 1.3 Add release-please workflow
+- [x] 1.1 Add release-please config and manifest — aff2b5d
+- [x] 1.2 Annotate version line — 4a7438e
+- [x] 1.3 Add release-please workflow — 0ec8355
 
 ### Phase 2: Docs
 
-- [ ] 2.1 AGENTS.md release and CI rows
-- [ ] 2.2 SDLC.md releasing note
-- [ ] 2.3 BACKWARD_COMPATIBILITY.md version-bump path
+- [x] 2.1 AGENTS.md release and CI rows — 23ba6c7
+- [x] 2.2 SDLC.md releasing note — b8e471e
+- [x] 2.3 BACKWARD_COMPATIBILITY.md version-bump path — 2a3a931
