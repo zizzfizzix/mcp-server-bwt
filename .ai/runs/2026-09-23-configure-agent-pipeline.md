@@ -43,4 +43,6 @@ Land the agent-pipeline setup that `om-setup-agent-pipeline` produced on `cez/7d
 
 ### Phase 2: Verify
 
-- [ ] 2.1 Verify config, paths, docs and run the validation gate
+- [x] 2.1 Verify config, paths, docs and run the validation gate — c1755c5
+
+> 2.1 result: config parses, all `paths.*` directories and both descriptors exist, the descriptors are byte-identical to the installed shipped versions, and no template placeholders remain. Gate: `ruff format --check` ✅, `uv build` ✅, `ruff check` ❌ (15, #9), `mypy --strict` ❌ (5, #8). Both failures are pre-existing on `main`; this branch has no code diff.
