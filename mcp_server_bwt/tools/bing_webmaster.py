@@ -3,6 +3,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
+from bing_webmaster_tools.errors import BingWebmasterError
 from bing_webmaster_tools.services import (
     content_blocking,
     content_management,
@@ -15,7 +16,8 @@ from bing_webmaster_tools.services import (
     traffic_analysis,
     url_management,
 )
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 
@@ -37,7 +39,7 @@ SERVICE_CLASSES = {
 
 
 def wrap_service_method(
-    mcp: FastMCP, service: BingWebmasterService, service_attr: str, method_name: str
+    mcp: MCPServer, service: BingWebmasterService, service_attr: str, method_name: str
 ) -> Callable[..., Any]:
     """Helper function to wrap a service method with mcp.tool() while preserving its signature and docstring.
 
@@ -74,7 +76,12 @@ def wrap_service_method(
             # Get the method from the instance
             method = getattr(service_obj, method_name)
             # Call the method directly - it's already bound to the instance
-            return await method(*args, **kwargs)
+            try:
+                return await method(*args, **kwargs)
+            except (BingWebmasterError, ValueError) as exc:
+                # mcp 2.x only forwards the message of a ToolError to the client;
+                # ValueError includes pydantic.ValidationError
+                raise ToolError(str(exc)) from exc
 
     # Copy signature and docstring
     wrapper.__signature__ = new_sig  # type: ignore
@@ -83,7 +90,7 @@ def wrap_service_method(
     return wrapper
 
 
-def add_bing_webmaster_tools(mcp: FastMCP, service: BingWebmasterService) -> None:
+def add_bing_webmaster_tools(mcp: MCPServer, service: BingWebmasterService) -> None:
     # Site Management Tools
     get_sites = wrap_service_method(mcp, service, "sites", "get_sites")  # noqa: F841
     add_site = wrap_service_method(mcp, service, "sites", "add_site")  # noqa: F841
