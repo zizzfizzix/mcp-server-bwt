@@ -18,7 +18,6 @@ from bing_webmaster_tools.services import (
 )
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
-from pydantic import ValidationError
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 
@@ -79,8 +78,9 @@ def wrap_service_method(
             # Call the method directly - it's already bound to the instance
             try:
                 return await method(*args, **kwargs)
-            except (BingWebmasterError, ValidationError) as exc:
-                # mcp 2.x only forwards the message of a ToolError to the client
+            except (BingWebmasterError, ValueError) as exc:
+                # mcp 2.x only forwards the message of a ToolError to the client;
+                # ValueError includes pydantic.ValidationError
                 raise ToolError(str(exc)) from exc
 
     # Copy signature and docstring

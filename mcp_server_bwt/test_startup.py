@@ -92,3 +92,32 @@ def test_upstream_errors_reach_the_client(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert not isinstance(excinfo.value, UnexpectedToolError)
     assert str(excinfo.value) == "Error executing tool get_sites: Invalid API key"
+
+
+def test_upstream_argument_checks_reach_the_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression for #14: upstream ValueError and response ValidationError keep their text."""
+    monkeypatch.setenv("BING_WEBMASTER_API_KEY", "dummy")
+    main = importlib.import_module("mcp_server_bwt.main")
+
+    async def bad_response(self: BingWebmasterClient, *args: Any, **kwargs: Any) -> Any:
+        return {"d": [{"Url": "https://example.com/"}]}
+
+    monkeypatch.setattr(BingWebmasterClient, "request", bad_response)
+
+    with pytest.raises(ToolError) as empty_batch:
+        asyncio.run(
+            main.mcp.call_tool(
+                "submit_url_batch", {"self": "", "site_url": "a", "url_list": []}
+            )
+        )
+    with pytest.raises(ToolError) as bad_site:
+        asyncio.run(main.mcp.call_tool("get_sites", {"self": ""}))
+
+    assert not isinstance(empty_batch.value, UnexpectedToolError)
+    assert str(empty_batch.value) == (
+        "Error executing tool submit_url_batch: URL list cannot be empty"
+    )
+    assert not isinstance(bad_site.value, UnexpectedToolError)
+    assert "validation errors for Site" in str(bad_site.value)
