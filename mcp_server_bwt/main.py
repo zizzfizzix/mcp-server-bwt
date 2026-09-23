@@ -4,8 +4,9 @@ from mcp.server.mcpserver import MCPServer
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 from mcp_server_bwt.tools.bing_webmaster import add_bing_webmaster_tools
+from mcp_server_bwt.version import __VERSION__
 
-mcp = MCPServer("mcp-server-bwt")
+mcp = MCPServer("mcp-server-bwt", version=__VERSION__)
 
 # Initialize Bing Webmaster Tools service
 api_key = os.getenv("BING_WEBMASTER_API_KEY")

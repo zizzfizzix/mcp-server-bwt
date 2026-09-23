@@ -5,6 +5,8 @@ from typing import Any
 
 import pytest
 from bing_webmaster_tools import BingWebmasterClient
+from bing_webmaster_tools.errors import BingWebmasterError
+from mcp.server.mcpserver.exceptions import ToolError, UnexpectedToolError
 
 EXPECTED_TOOL_COUNT = 62
 
@@ -71,3 +73,22 @@ def test_tool_calls_reach_the_client(monkeypatch: pytest.MonkeyPatch) -> None:
     assert not sites.is_error
     assert json.loads(sites.content[0].text)["Url"] == "https://example.com/"
     assert sites.structured_content == {"result": [SITE]}
+
+
+def test_upstream_errors_reach_the_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression for #14: mcp 2.x hides non-ToolError messages, so upstream errors are re-raised."""
+    monkeypatch.setenv("BING_WEBMASTER_API_KEY", "dummy")
+    main = importlib.import_module("mcp_server_bwt.main")
+
+    async def failing_request(
+        self: BingWebmasterClient, *args: Any, **kwargs: Any
+    ) -> Any:
+        raise BingWebmasterError("Invalid API key", status_code=401)
+
+    monkeypatch.setattr(BingWebmasterClient, "request", failing_request)
+
+    with pytest.raises(ToolError) as excinfo:
+        asyncio.run(main.mcp.call_tool("get_sites", {"self": ""}))
+
+    assert not isinstance(excinfo.value, UnexpectedToolError)
+    assert str(excinfo.value) == "Error executing tool get_sites: Invalid API key"

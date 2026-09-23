@@ -3,6 +3,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
+from bing_webmaster_tools.errors import BingWebmasterError
 from bing_webmaster_tools.services import (
     content_blocking,
     content_management,
@@ -16,6 +17,8 @@ from bing_webmaster_tools.services import (
     url_management,
 )
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
+from pydantic import ValidationError
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 
@@ -74,7 +77,11 @@ def wrap_service_method(
             # Get the method from the instance
             method = getattr(service_obj, method_name)
             # Call the method directly - it's already bound to the instance
-            return await method(*args, **kwargs)
+            try:
+                return await method(*args, **kwargs)
+            except (BingWebmasterError, ValidationError) as exc:
+                # mcp 2.x only forwards the message of a ToolError to the client
+                raise ToolError(str(exc)) from exc
 
     # Copy signature and docstring
     wrapper.__signature__ = new_sig  # type: ignore
