@@ -1,11 +1,11 @@
 import os
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 from mcp_server_bwt.tools.bing_webmaster import add_bing_webmaster_tools
 
-mcp = FastMCP("mcp-server-bwt")
+mcp = MCPServer("mcp-server-bwt")
 
 # Initialize Bing Webmaster Tools service
 api_key = os.getenv("BING_WEBMASTER_API_KEY")
