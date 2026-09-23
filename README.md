@@ -102,6 +102,15 @@ In your Zed settings.json add:
 }
 ```
 
+## Development
+
+`make install` installs the dependencies and the git hooks in `lefthook.yml`:
+
+- **pre-commit** runs `ruff check --fix` and `ruff format` on your staged `*.py` files. Fixes are staged into the same commit. The commit fails only on findings ruff can't fix.
+- **pre-push** runs `mypy --strict`. It also runs `uv lock --check` when the push includes `pyproject.toml` or `uv.lock`.
+
+To skip the hooks once, use `git commit --no-verify` or `git push --no-verify`, or set `LEFTHOOK=0`.
+
 ## Available Tools
 
 The server provides the following Bing Webmaster Tools API functionality (more info in the [API docs](https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces?view=bing-webmaster-dotnet)):
