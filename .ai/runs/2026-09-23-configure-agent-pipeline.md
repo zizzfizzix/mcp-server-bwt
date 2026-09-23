@@ -39,7 +39,7 @@ Land the agent-pipeline setup that `om-setup-agent-pipeline` produced on `cez/7d
 
 ### Phase 1: Land the setup
 
-- [ ] 1.1 Cherry-pick the pipeline setup commit
+- [x] 1.1 Cherry-pick the pipeline setup commit — d6ab654
 
 ### Phase 2: Verify
 
