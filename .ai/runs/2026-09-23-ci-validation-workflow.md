@@ -15,6 +15,8 @@ A new `.github/workflows/ci.yml`, plus the `AGENTS.md` CI row and the `SDLC.md` 
 
 ## Risks
 
+- **Blocker:** the automation token has no `workflow` scope, so it can't push `.github/workflows/ci.yml`. The file's exact content is in the PR comment, for the maintainer to commit via the GitHub web UI or with a token that has `workflow`. Steps 1.1 and 1.2 resume after that.
+
 - The job id `validate` becomes the required-check context once Phase 2 is applied, and renaming it later breaks merges.
 - The workflow's steps are a hand copy of `validation.commands`, and the docs record that the two change together.
 
@@ -26,5 +28,5 @@ A new `.github/workflows/ci.yml`, plus the `AGENTS.md` CI row and the `SDLC.md` 
 
 - [ ] 1.1 Add the CI workflow with the validate job
 - [ ] 1.2 Prove validate fails on a gate finding
-- [ ] 1.3 Replace the CI row in AGENTS.md
-- [ ] 1.4 Document the workflow in the SDLC.md validation gate
+- [x] 1.3 Replace the CI row in AGENTS.md — 4a8cc72
+- [x] 1.4 Document the workflow in the SDLC.md validation gate — 6bc5f1e
