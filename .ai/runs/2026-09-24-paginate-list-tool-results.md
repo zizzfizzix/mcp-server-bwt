@@ -24,7 +24,7 @@ The 27 list-returning tools return at most 50 rows by default. They take `offset
 
 ### Phase 1: Paging in wrap_service_method
 
-- [ ] 1.1 Slicing helper and page-size resolver
+- [x] 1.1 Slicing helper and page-size resolver — 9f725aa
 - [ ] 1.2 Signature and schema for list tools
 - [ ] 1.3 Result building with CallToolResult and _meta
 - [ ] 1.4 Docs: README, AGENTS.md, BACKWARD_COMPATIBILITY.md
