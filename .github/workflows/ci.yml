@@ -1,0 +1,38 @@
+# Runs the validation gate (AGENTS.md → Validation gate, .ai/agentic.config.json →
+# validation.commands) on every PR and every push to main. Keep the gate steps in sync
+# with validation.commands: change both together.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The job id is the required-check name on the main ruleset. Never rename it.
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv publishes no floating major tags, so pin the release commit.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+      # uv provisions the Python pinned in .python-version.
+      - run: uv sync --locked
+      - run: uv run ruff check mcp_server_bwt/
+      - run: uv run ruff format --check mcp_server_bwt/
+      - run: uv run mypy --strict mcp_server_bwt/
+      - run: uv build
+      - name: Import smoke test
+        env:
+          BING_WEBMASTER_API_KEY: dummy
+        run: uv run python -c "import mcp_server_bwt.main"
