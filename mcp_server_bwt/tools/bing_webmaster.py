@@ -1,5 +1,6 @@
 import inspect
-from collections.abc import Callable
+import os
+from collections.abc import Callable, Mapping, Sequence
 from functools import wraps
 from typing import Any, TypeVar
 
@@ -22,6 +23,59 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 
 T = TypeVar("T")
+
+# Pagination of list results (#39): tools returning a list are sliced locally,
+# because the upstream API returns every row in one response
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 500
+PAGE_SIZE_ENV = "BING_WEBMASTER_PAGE_SIZE"
+PAGINATION_META_KEY = "mcp-server-bwt/pagination"
+
+
+def resolve_page_size(environ: Mapping[str, str] = os.environ) -> int | None:
+    """Return the default `limit` for list tools, or None when paging is disabled.
+
+    >>> resolve_page_size({})
+    50
+    >>> resolve_page_size({"BING_WEBMASTER_PAGE_SIZE": "0"}) is None
+    True
+    >>> resolve_page_size({"BING_WEBMASTER_PAGE_SIZE": "200"})
+    200
+    """
+    raw = environ.get(PAGE_SIZE_ENV, "").strip()
+    if not raw:
+        return DEFAULT_PAGE_SIZE
+    try:
+        value = int(raw)
+    except ValueError:
+        value = -1
+    if not 0 <= value <= MAX_PAGE_SIZE:
+        raise ValueError(
+            f"{PAGE_SIZE_ENV} must be an integer between 0 and {MAX_PAGE_SIZE}"
+        )
+    return value or None
+
+
+def paginate[R](
+    rows: Sequence[R], offset: int, limit: int | None
+) -> tuple[list[R], int, int | None]:
+    """Slice `rows` and return (page, total, next_offset).
+
+    `next_offset` is None once the page reaches the end of `rows`.
+
+    >>> paginate([1, 2, 3, 4, 5], 0, 2)
+    ([1, 2], 5, 2)
+    >>> paginate([1, 2, 3, 4, 5], 4, 2)
+    ([5], 5, None)
+    >>> paginate([1, 2, 3], 7, 2)
+    ([], 3, None)
+    """
+    total = len(rows)
+    stop = total if limit is None else offset + limit
+    page = list(rows[offset:stop])
+    end = offset + len(page)
+    return page, total, end if page and end < total else None
+
 
 # Map service attribute names to their corresponding service classes
 SERVICE_CLASSES = {
