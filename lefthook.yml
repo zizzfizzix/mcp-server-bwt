@@ -25,6 +25,12 @@ pre-push:
   jobs:
     - name: mypy
       run: uv run mypy --strict mcp_server_bwt/
+    # The validation gate's test command. The key is fixed, so a real one never reaches the tests.
+    - name: pytest
+      glob: "*.py"
+      env:
+        BING_WEBMASTER_API_KEY: dummy
+      run: uv run pytest mcp_server_bwt --doctest-modules
     - name: uv lock --check
       glob: ["pyproject.toml", "uv.lock"]
       run: uv lock --check
