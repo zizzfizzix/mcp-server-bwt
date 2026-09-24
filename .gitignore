@@ -169,6 +169,9 @@ cython_debug/
 # Macos
 .DS_Store
 
+# lefthook per-developer overrides
+lefthook-local.yml
+
 # Agent pipeline: per-run QA state (generated, not source)
 .ai/qa/artifacts_*/
 .ai/qa/test-env.json

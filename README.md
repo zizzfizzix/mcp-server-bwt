@@ -26,7 +26,7 @@ Claude will use the appropriate MCP tools to fulfill your requests.
 
 ### Using uvx (recommended)
 
-When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installation is needed. We will use it to directly run *mcp_server_bwt* from the client app.
+When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installation is needed. We will use it to directly run `mcp-server-bwt` from the client app.
 
 #### Add to Claude desktop with uvx
 
@@ -39,8 +39,11 @@ When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installa
     "args": [
       "--from",
       "git+https://github.com/zizzfizzix/mcp-server-bwt",
-      "mcp_server_bwt"
-    ]
+      "mcp-server-bwt"
+    ],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
   }
 }
 ```
@@ -50,16 +53,19 @@ When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installa
 In your Zed settings.json add:
 
 ```json
-"context_servers": [
+"context_servers": {
   "bwtServer": {
     "command": "uvx",
     "args": [
       "--from",
       "git+https://github.com/zizzfizzix/mcp-server-bwt",
-      "mcp_server_bwt"
-    ]
+      "mcp-server-bwt"
+    ],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
   }
-]
+}
 ```
 
 ### Using make
@@ -101,6 +107,15 @@ In your Zed settings.json add:
   }
 }
 ```
+
+## Development
+
+`make install` installs the dependencies and the git hooks in `lefthook.yml`:
+
+- **pre-commit** runs `ruff check --fix` and `ruff format` on your staged `*.py` files. Fixes are staged into the same commit. The commit fails only on findings ruff can't fix.
+- **pre-push** runs `mypy --strict`. It also runs `uv lock --check` when the push includes `pyproject.toml` or `uv.lock`.
+
+To skip the hooks once, use `git commit --no-verify` or `git push --no-verify`, or set `LEFTHOOK=0`.
 
 ## Available Tools
 
