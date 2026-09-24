@@ -19,12 +19,14 @@ Add a `pytest` job to the lefthook `pre-push` block. It runs the gate's pytest c
 
 ## Progress
 
+PR: #38
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: pre-push pytest job
 
-- [ ] 1.1 Re-measure the suite runtime
-- [ ] 1.2 Add the pytest job to pre-push
-- [ ] 1.3 Update the AGENTS.md Tooling row
-- [ ] 1.4 Prove the hook in a throwaway clone
-- [ ] 1.5 Run the full validation gate
+- [x] 1.1 Re-measure the suite runtime — pytest 2.00–2.10 s wall, mypy 0.39 s (3 runs at 2d14ae0); pre-push
+- [x] 1.2 Add the pytest job to pre-push — eb464af
+- [x] 1.3 Update the AGENTS.md Tooling row — 8707f69
+- [x] 1.4 Prove the hook in a throwaway clone — /tmp clone + bare remote: pass, block, docs-only skip, --no-verify, key override
+- [x] 1.5 Run the full validation gate — all 5 commands green
