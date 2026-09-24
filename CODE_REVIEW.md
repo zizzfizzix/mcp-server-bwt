@@ -39,7 +39,7 @@ These rules apply to every PR in `mcp-server-bwt`, whether a human or `om-code-r
 ### Dependencies and packaging
 
 - Dependency changes go through `pyproject.toml` (and the uv lockfile when one is committed). An upgrade of `bing-webmaster-tools` or `mcp` can silently change tool signatures. Check the tool list against the new version before approving.
-- Version bumps edit `mcp_server_bwt/version.py` only.
+- Versions are owned by release-please (`SDLC.md`, *Releasing*). Only the bot's `chore(main): release X.Y.Z` PR edits `mcp_server_bwt/version.py`, `CHANGELOG.md` and `.release-please-manifest.json`. A hand edit in any other PR is a finding, and the fix is a Conventional Commit PR title that produces the intended bump.
 
 ### Tests
 
@@ -47,7 +47,7 @@ These rules apply to every PR in `mcp-server-bwt`, whether a human or `om-code-r
 
 ## Validation gate
 
-Before sign-off, the PR must pass `uv run ruff check mcp_server_bwt/`, `uv run ruff format --check mcp_server_bwt/`, `uv run mypy --strict mcp_server_bwt/` and `uv build`. The repo has no CI, so the reviewer should see local gate evidence in the PR.
+Before sign-off, the PR must pass the validation gate listed in `AGENTS.md` (Validation gate), which mirrors `validation.commands` in `.ai/agentic.config.json`: ruff check, ruff format check, `mypy --strict`, `uv build`, and the pytest suite with a dummy API key. CI runs the same gate as the required `validate` check, so a green `validate` run is the gate evidence. A failing or skipped step is a finding.
 
 ## Severity guidance
 

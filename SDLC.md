@@ -32,6 +32,10 @@ Before intake, the work is shaped: `om-brainstorm` turns a single idea or questi
 
 After merge, this process stops. Deployment, smoke tests, monitoring, and rollback belong to the repository's release process, not to this document: the Maintainer — or a release manager, when the team names one — drafts the changelog with `om-auto-update-changelog` and reconciles the tracker with `om-close-fixed-issues`, and `om-pipeline-retro` reads finished runs to rank what second passes cost. Merge is where this document ends; delivering the change to users is a separate process the team owns.
 
+### Releasing
+
+Releases are cut by [release-please](https://github.com/googleapis/release-please-action). After every push to `main` it opens or updates one `chore(main): release X.Y.Z` PR from the Conventional Commit titles merged since the last tag. Merging that PR is how a release is made: it bumps `mcp_server_bwt/version.py`, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub release. The Maintainer decides when to merge it. PR titles therefore matter: `fix:` releases a patch, `feat:` a minor, a breaking change (`!` or `BREAKING CHANGE:`) a minor while pre-1.0, and `chore:`/`docs:`/`refactor:` release nothing on their own. `om-auto-update-changelog` is still available for ad-hoc notes, but `CHANGELOG.md` is generated.
+
 ## Label state machine
 
 Pipeline labels are mutually exclusive: a PR carries at most one, and it names where the PR sits in the flow.
@@ -108,8 +112,9 @@ Every PR passes the full validation gate before review sign-off, in this order:
 - `uv run ruff format --check mcp_server_bwt/`
 - `uv run mypy --strict mcp_server_bwt/`
 - `uv build`
+- `BING_WEBMASTER_API_KEY=dummy uv run pytest mcp_server_bwt --doctest-modules`
 
-Any non-zero exit fails the gate and blocks the PR. The implementing skills run the gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. The command list lives in `.ai/agentic.config.json`; when it changes, update it there and in this section together.
+Any non-zero exit fails the gate and blocks the PR. The implementing skills run the gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. The command list lives in `.ai/agentic.config.json`. CI runs the same gate: `.github/workflows/ci.yml` (job `validate`) runs these commands, including the test suite, plus an import smoke test with a dummy API key, on every PR and every push to `main`. `validate` is a required status check on the `main` ruleset, so a PR with a failing gate can't merge. The one exemption is a release-please PR. When a PR's head is in this repository and its head branch starts with `release-please--branches--`, `validate` is skipped. A skipped job still reports the check, and a skipped check satisfies the required check. Those PRs only regenerate the release files from commits that already passed on `main`, and the push to `main` after they merge runs the full gate. Fork PRs always run the gate. Never rename the `validate` job, because the required check matches it by name. When the command list changes, update `.ai/agentic.config.json`, the workflow steps and this section together.
 
 ## Amending this process
 

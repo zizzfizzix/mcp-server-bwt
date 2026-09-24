@@ -8,7 +8,8 @@
       "uv run ruff check mcp_server_bwt/",
       "uv run ruff format --check mcp_server_bwt/",
       "uv run mypy --strict mcp_server_bwt/",
-      "uv build"
+      "uv build",
+      "BING_WEBMASTER_API_KEY=dummy uv run pytest mcp_server_bwt --doctest-modules"
     ]
   },
   "labels": {

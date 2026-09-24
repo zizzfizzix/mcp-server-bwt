@@ -2,7 +2,7 @@
 
 `mcp-server-bwt` is consumed by MCP clients (Claude Desktop, Zed, Cursor, …) that users configure by hand and that AI assistants drive by tool name. The surfaces below are protected contracts. Review skills check every change against this file, and implementation skills warn when a change breaks one.
 
-The project is pre-1.0 (`0.1.0`), but users run it via `uvx mcp-server-bwt`, which picks up new releases without any action on their side. Breaking changes therefore still need the paths below.
+The project is pre-1.0, but users run it via `uvx mcp-server-bwt`, which picks up new releases without any action on their side. Breaking changes therefore still need the paths below. Versions are cut by release-please (see `SDLC.md`, *Releasing*). Where a path below asks for a minor version bump, mark the PR title breaking (`feat!:` / `fix!:`, or a `BREAKING CHANGE:` footer), which makes release-please bump the minor version while pre-1.0. Never edit `mcp_server_bwt/version.py` by hand.
 
 ## Protected surfaces
 
@@ -12,7 +12,7 @@ The 62 tools registered in `mcp_server_bwt/tools/bing_webmaster.py` (listed in t
 
 - **Breaking:** removing or renaming a tool; registering it under a different upstream method that changes its behavior.
 - **Non-breaking:** adding a new tool.
-- **Required path:** note the removal or rename in the PR body and README. For a rename, keep the old name registered alongside the new one for at least one minor release, and mention the deprecation in its description. Bump the minor version in `mcp_server_bwt/version.py`.
+- **Required path:** note the removal or rename in the PR body and README. For a rename, keep the old name registered alongside the new one for at least one minor release, and mention the deprecation in its description. Mark the PR title breaking so release-please bumps the minor version.
 
 ### 2. Tool input schemas and results
 
