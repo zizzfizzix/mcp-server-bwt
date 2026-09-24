@@ -18,6 +18,15 @@ concurrency:
 jobs:
   # The job id is the required-check name on the main ruleset. Never rename it.
   validate:
+    # Skip release-please PRs. They only touch generated release files, built from
+    # commits that already passed validate on main. A skipped job still reports the
+    # `validate` check, and a skipped check satisfies the required check. The
+    # same-repo guard stops a fork from getting a free pass by reusing the branch
+    # name. Pushes to main always run the full gate.
+    if: >-
+      github.event_name != 'pull_request'
+      || github.event.pull_request.head.repo.full_name != github.repository
+      || !startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
