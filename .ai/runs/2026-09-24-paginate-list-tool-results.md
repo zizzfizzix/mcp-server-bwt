@@ -27,4 +27,4 @@ The 27 list-returning tools return at most 50 rows by default. They take `offset
 - [x] 1.1 Slicing helper and page-size resolver — 9f725aa
 - [x] 1.2 Signature and schema for list tools — f89c8ef
 - [x] 1.3 Result building with CallToolResult and _meta — f89c8ef (also: the #6 date parser accepts RFC 3339 date-times so mcp can re-validate paged rows)
-- [ ] 1.4 Docs: README, AGENTS.md, BACKWARD_COMPATIBILITY.md
+- [x] 1.4 Docs: README, AGENTS.md, BACKWARD_COMPATIBILITY.md — 87e67fd
