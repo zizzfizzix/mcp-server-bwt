@@ -6,6 +6,7 @@ import pytest
 from bing_webmaster_tools import BingWebmasterClient
 from bing_webmaster_tools.models.traffic_analysis import QueryStats
 from bing_webmaster_tools.services.traffic_analysis import TrafficAnalysisService
+from mcp.client.client import Client
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, TextContent
@@ -256,3 +257,27 @@ def _limit_schema(mcp: MCPServer) -> dict[str, Any]:
     tool = next(t for t in tools if t.name == "get_query_stats")
     schema: dict[str, Any] = tool.input_schema["properties"]["limit"]
     return schema
+
+
+def test_paging_state_reaches_the_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """#39: `_meta`, the rows and the summary block survive the MCP protocol round trip."""
+    mcp = _server(monkeypatch, 5)
+
+    async def run() -> CallToolResult:
+        async with Client(mcp) as client:
+            return await client.call_tool(
+                "get_query_stats", {"site_url": "https://example.com/", "limit": 2}
+            )
+
+    result = asyncio.run(run())
+
+    assert not result.is_error
+    assert _pagination(result) == {
+        "total": 5,
+        "offset": 0,
+        "limit": 2,
+        "next_offset": 2,
+    }
+    assert result.structured_content is not None
+    assert len(result.structured_content["result"]) == 2
+    assert _texts(result)[-1] == "Showing rows 0–2 of 5; next_offset=2"
