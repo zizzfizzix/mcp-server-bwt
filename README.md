@@ -125,12 +125,12 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 
 Tools that return a list (for example `get_query_stats`, `get_page_stats` and `get_crawl_issues`) return at most 50 rows per call, so a large site's history doesn't overflow the client's context window. They take two optional parameters:
 
-- `limit`: rows per call (1–500, default 50)
+- `limit`: rows per call (1–500, default 50; see `BING_WEBMASTER_PAGE_SIZE` below)
 - `offset`: index of the first row (default 0)
 
-Each result ends with a line such as `Showing rows 0–50 of 1200; next_offset=50`. The same values are in the result's `_meta` under `mcp-server-bwt/pagination` (`total`, `offset`, `limit`, `next_offset`). To get the next page, call again with `offset` set to `next_offset`.
+Each paged result ends with a line such as `Showing 50 of 1200 rows from offset 0; next_offset=50`. The same values are in the result's `_meta` under `mcp-server-bwt/pagination` (`total`, `offset`, `limit`, `next_offset`). To get the next page, call again with `offset` set to `next_offset`.
 
-> **Migrating from 0.2.x:** list tools used to return every row. To get that behavior back, set `BING_WEBMASTER_PAGE_SIZE=0` in the server's `env`.
+> **Migrating from 0.1.x:** list tools used to return every row. To get that behavior back, set `BING_WEBMASTER_PAGE_SIZE=0` in the server's `env`.
 
 ### Site Management
 
@@ -258,7 +258,7 @@ The following environment variables are required:
 
 Optional:
 
-- `BING_WEBMASTER_PAGE_SIZE`: default number of rows list tools return per call (1–500, default 50). `0` turns paging off, so list tools return every row unless a caller passes `limit`. The server doesn't start if the value is invalid.
+- `BING_WEBMASTER_PAGE_SIZE`: default number of rows list tools return per call (1–500, default 50). `0` turns paging off: list tools return every row with no summary line, unless a caller passes `limit` or `offset`, and the 500 cap is lifted. The server doesn't start if the value is invalid.
 
 ### Starting the Server
 

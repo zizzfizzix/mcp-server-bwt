@@ -121,11 +121,13 @@ def test_unparseable_api_date_still_raises() -> None:
     """#6: unknown input keeps upstream's error instead of a silent default."""
     with pytest.raises(ValueError, match="Unable to parse date"):
         parse_timestamp_utc("2026-06-12")
+    with pytest.raises(ValueError, match="Unable to parse date"):
+        parse_timestamp_utc("2026-06-12T00:00:00")  # naive: zone unknown
 
 
 @pytest.mark.parametrize(
     "value",
-    ["2026-06-12T00:00:00Z", "2026-06-12T02:00:00+02:00", "2026-06-12T00:00:00"],
+    ["2026-06-12T00:00:00Z", "2026-06-12T02:00:00+02:00"],
 )
 def test_serialized_dates_validate_again(value: str) -> None:
     """#39: a dumped row's RFC 3339 date parses back to the same UTC instant."""

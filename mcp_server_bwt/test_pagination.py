@@ -1,6 +1,10 @@
 import asyncio
+import inspect
 import json
-from typing import Any
+from datetime import datetime
+from enum import Enum
+from types import UnionType
+from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 
 import pytest
 from bing_webmaster_tools import BingWebmasterClient
@@ -10,6 +14,7 @@ from mcp.client.client import Client
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, TextContent
+from pydantic import BaseModel
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 from mcp_server_bwt.tools.bing_webmaster import (
@@ -17,9 +22,12 @@ from mcp_server_bwt.tools.bing_webmaster import (
     MAX_PAGE_SIZE,
     PAGE_SIZE_ENV,
     PAGINATION_META_KEY,
+    SERVICE_CLASSES,
     add_bing_webmaster_tools,
+    page_result,
     paginate,
     resolve_page_size,
+    returns_list,
     wrap_service_method,
 )
 
@@ -139,7 +147,7 @@ def test_list_tools_are_bounded_by_default(monkeypatch: pytest.MonkeyPatch) -> N
         "next_offset": 50,
     }
     assert len(result.content) == 51
-    assert _texts(result)[-1] == "Showing rows 0–50 of 60; next_offset=50"
+    assert _texts(result)[-1] == "Showing 50 of 60 rows from offset 0; next_offset=50"
 
 
 def test_offset_and_limit_page_through_rows(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -155,7 +163,7 @@ def test_offset_and_limit_page_through_rows(monkeypatch: pytest.MonkeyPatch) -> 
     assert last.structured_content is not None
     assert [r["Clicks"] for r in last.structured_content["result"]] == [4]
     assert _pagination(last)["next_offset"] is None
-    assert _texts(last)[-1] == "Showing rows 4–5 of 5; last page"
+    assert _texts(last)[-1] == "Showing 1 of 5 rows from offset 4; last page"
     assert past.structured_content == {"result": []}
     assert _pagination(past)["next_offset"] is None
 
@@ -280,4 +288,76 @@ def test_paging_state_reaches_the_client(monkeypatch: pytest.MonkeyPatch) -> Non
     }
     assert result.structured_content is not None
     assert len(result.structured_content["result"]) == 2
-    assert _texts(result)[-1] == "Showing rows 0–2 of 5; next_offset=2"
+    assert _texts(result)[-1] == "Showing 2 of 5 rows from offset 0; next_offset=2"
+
+
+def _sample(tp: Any, name: str = "") -> Any:
+    """A raw API value for type `tp`, as the Bing API would send it."""
+    origin = get_origin(tp)
+    if origin is Annotated:
+        return _sample(get_args(tp)[0], name)
+    if origin in (Union, UnionType):
+        return _sample(next(a for a in get_args(tp) if a is not type(None)), name)
+    if origin is list:
+        return [_sample(get_args(tp)[0], name)]
+    if isinstance(tp, type) and issubclass(tp, BaseModel):
+        return _raw_row(tp)
+    if isinstance(tp, type) and issubclass(tp, Enum):
+        return list(tp)[-1].value
+    samples: dict[Any, Any] = {
+        bool: True,
+        int: 5,
+        float: 1.5,
+        datetime: "/Date(1781222400000)/",
+    }
+    if tp in samples:
+        return samples[tp]
+    return "https://example.com/" if "url" in name else "x"
+
+
+def _raw_row(model: type[BaseModel]) -> dict[str, Any]:
+    hints = get_type_hints(model, include_extras=True)
+    # Fields with upstream validators that reject generic samples
+    overrides: dict[str, Any] = {
+        "crawl_rate": [1] * 24,
+        "two_letter_iso_country_code": "us",
+    }
+    return {
+        field.alias or name: overrides.get(name, _sample(hints[name], name))
+        for name, field in model.model_fields.items()
+    }
+
+
+LIST_METHODS = [
+    (attr, name)
+    for attr, cls in SERVICE_CLASSES.items()
+    for name, method in inspect.getmembers(cls, inspect.iscoroutinefunction)
+    if not name.startswith("_") and returns_list(method)
+]
+
+
+@pytest.mark.parametrize(("attr", "name"), LIST_METHODS)
+def test_every_list_tool_pages_like_it_serializes(
+    monkeypatch: pytest.MonkeyPatch, attr: str, name: str
+) -> None:
+    """#39: each list tool's rows pass mcp's re-validation and match unpaged output."""
+    monkeypatch.delenv(PAGE_SIZE_ENV, raising=False)
+    method = getattr(SERVICE_CLASSES[attr], name)
+    element = get_args(get_type_hints(method)["return"])[0]
+    rows = [
+        element.model_validate(_raw_row(element))
+        if isinstance(element, type) and issubclass(element, BaseModel)
+        else _sample(element)
+        for _ in range(3)
+    ]
+    mcp = MCPServer("test")
+    wrap_service_method(mcp, BingWebmasterService("dummy"), attr, name)
+    metadata = mcp._tool_manager.get_tool(name).fn_metadata
+
+    unpaged = metadata.convert_result(rows)
+    paged = metadata.convert_result(page_result(rows, 0, 50))
+
+    assert isinstance(unpaged, CallToolResult)
+    assert isinstance(paged, CallToolResult)
+    assert paged.structured_content == unpaged.structured_content
+    assert paged.content[:-1] == unpaged.content

@@ -44,7 +44,9 @@ def parse_timestamp_utc(value: Any) -> datetime:
         except ValueError:
             pass
         else:
-            return iso.astimezone(UTC) if iso.tzinfo else iso.replace(tzinfo=UTC)
+            # Only values with an explicit offset: a naive one has no known zone
+            if iso.tzinfo is not None:
+                return iso.astimezone(UTC)
     parsed = utils.parse_timestamp_from_api(value)
     # Upstream's parser yields local time when it doesn't attach a timezone
     return parsed.astimezone(UTC)

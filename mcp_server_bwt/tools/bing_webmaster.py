@@ -132,9 +132,8 @@ def page_result(
     if limit is None and offset == 0:
         return list(rows)
     page, total, next_offset = paginate(rows, offset, limit)
-    end = offset + len(page)
     status = f"next_offset={next_offset}" if next_offset is not None else "last page"
-    summary = f"Showing rows {offset}–{end} of {total}; {status}"
+    summary = f"Showing {len(page)} of {total} rows from offset {offset}; {status}"
     # Serialize rows the way mcp does for a returned list (one block per row)
     content: list[ContentBlock] = [
         TextContent(
@@ -219,9 +218,8 @@ def wrap_service_method(
     # Create wrapper function with same signature
     @wraps(original_method)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        if paged:
-            offset: int = kwargs.pop("offset", 0)
-            limit: int | None = kwargs.pop("limit", page_size)
+        offset: int = kwargs.pop("offset", 0) if paged else 0
+        limit: int | None = kwargs.pop("limit", page_size) if paged else None
         async with service as s:
             service_obj = getattr(s, service_attr)
             # Get the method from the instance
