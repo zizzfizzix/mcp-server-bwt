@@ -41,6 +41,11 @@ jobs:
       - run: uv run ruff format --check mcp_server_bwt/
       - run: uv run mypy --strict mcp_server_bwt/
       - run: uv build
+      # validation.commands sets the key inline; the step sets the same dummy key via env.
+      - name: Tests
+        env:
+          BING_WEBMASTER_API_KEY: dummy
+        run: uv run pytest mcp_server_bwt --doctest-modules
       - name: Import smoke test
         env:
           BING_WEBMASTER_API_KEY: dummy
