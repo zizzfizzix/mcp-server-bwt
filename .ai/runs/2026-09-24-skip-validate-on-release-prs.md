@@ -37,6 +37,6 @@ Skip `validate` on release-please PRs from this repository while the required `v
 
 ### Phase 1: Workflow condition and docs
 
-- [ ] 1.1 Add the job-level `if:` to `validate` in `ci.yml`
-- [ ] 1.2 Document the exemption in the `AGENTS.md` CI row
-- [ ] 1.3 Document the exemption in the `SDLC.md` Validation gate section
+- [x] 1.1 Add the job-level `if:` to `validate` in `ci.yml` — 1f8e43a
+- [x] 1.2 Document the exemption in the `AGENTS.md` CI row — 14a1079
+- [x] 1.3 Document the exemption in the `SDLC.md` Validation gate section — dcddad3
