@@ -28,3 +28,4 @@ The 27 list-returning tools return at most 50 rows by default. They take `offset
 - [x] 1.2 Signature and schema for list tools — f89c8ef
 - [x] 1.3 Result building with CallToolResult and _meta — f89c8ef (also: the #6 date parser accepts RFC 3339 date-times so mcp can re-validate paged rows)
 - [x] 1.4 Docs: README, AGENTS.md, BACKWARD_COMPATIBILITY.md — 87e67fd
+- [x] Post-review fix: all-list-tools round-trip test, offset-only ISO dates, clearer summary line, README wording — 6d18833
