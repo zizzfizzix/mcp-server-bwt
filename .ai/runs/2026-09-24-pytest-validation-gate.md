@@ -28,4 +28,4 @@ Add `BING_WEBMASTER_API_KEY=dummy uv run pytest mcp_server_bwt --doctest-modules
 - [x] 1.2 Add the Tests step to the validate job — 404bea5
 - [x] 1.3 Update the gate docs in AGENTS.md and SDLC.md — 44b42d3
 - [x] 1.4 Check the four gate lists match — lists diffed identical; full gate green locally
-- [ ] 1.5 Prove validate fails at the Tests step on a broken test
+- [x] 1.5 Prove validate fails at the Tests step on a broken test — 1a52966 (red run 35988689393, fails at Tests), reverted 58a8b08, 59fec71
