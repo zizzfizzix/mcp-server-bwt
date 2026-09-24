@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
       - run: uv sync --locked          # uv installs the Python from .python-version (3.13.2)
@@ -57,7 +57,7 @@ jobs:
 - **One step per gate command, in gate order.** A failure names the command, so the log answers "which gate?" without scrolling. Steps stop at the first failure, the same as the local gate.
 - **Python comes from `.python-version`.** `uv sync` reads it and provisions a managed interpreter, so there's no `actions/setup-python` step and no second source of truth for the version.
 - **`uv sync --locked`** fails when `uv.lock` is out of date with `pyproject.toml`. That enforces the lockfile rule in `AGENTS.md` (Dependencies row).
-- **Actions are pinned to their current major tags** (`actions/checkout@v7`, `astral-sh/setup-uv@v10`, the latest releases at spec time), matching the `@v4` tag style of the release-please workflow in #22. Before committing, the implementer checks that those majors are still current.
+- **Action pinning:** `actions/checkout@v7`, a floating major tag, which matches the `@v4` style of the release-please workflow in #22. `astral-sh/setup-uv` publishes no floating major tags (only `v10.x.y`), so it is pinned to the v10.2.0 commit SHA with a version comment. The first CI run on #27 failed to resolve `@v10`.
 - **Required check.** After the workflow has merged and run once on `main`, the `main` ruleset gets a `required_status_checks` rule with context `validate`, bound to the GitHub Actions app (integration id `15368`) so another app can't post a status with the same name. `strict_required_status_checks_policy` stays `false`: requiring the branch to be up to date would force a rebase on every merge, and linear history plus squash merges already keep `main` coherent.
 
 **Alternatives considered**
@@ -102,7 +102,7 @@ This is repository infrastructure only. No file under `mcp_server_bwt/` changes,
 |---|---|---|---|
 | Q1 | Tests now exist (`mcp_server_bwt/test_*.py`, 9 passing). Should pytest join CI in this change? | **No, defer.** CI runs the four gate commands plus the import smoke test only. | The issue says to add pytest to the workflow and `validation.commands` together, and changing the gate contract is a separate, reviewable decision. A follow-up issue can add `BING_WEBMASTER_API_KEY=dummy uv run pytest mcp_server_bwt` to both. |
 | Q2 | Who applies the ruleset change, and when? | **After merge, by the maintainer or by an agent with explicit approval**, via Settings → Rules or `gh api -X PUT repos/{owner}/{repo}/rulesets/12497565`. | It's a repository-settings change outside the diff. Applying it before merge would block every open PR. |
-| Q3 | Pin actions by SHA or by major tag? | **Major tag** (`@v7`, `@v10`). | Matches the #22 convention and needs no update bot. SHA pinning plus Dependabot can follow separately. |
+| Q3 | Pin actions by SHA or by major tag? | **Major tag where one exists** (`checkout@v7`). setup-uv, which has none, is pinned by SHA to v10.2.0. | Matches the #22 convention and needs no update bot. Full SHA pinning plus Dependabot can follow separately. |
 | Q4 | Require branches to be up to date before merging (strict policy)? | **No.** | Squash merges with linear history keep `main` coherent. Strict mode forces a re-run and rebase for every merge. It can be turned on later with a single toggle. |
 | Q5 | Python version matrix? | **No**, single 3.13 from `.python-version`. | There's only one supported version today. |
 
