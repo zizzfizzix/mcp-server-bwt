@@ -20,6 +20,8 @@ The 27 list-returning tools return at most 50 rows by default. They take `offset
 
 ## Progress
 
+PR: #41
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Paging in wrap_service_method
