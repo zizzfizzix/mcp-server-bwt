@@ -1,6 +1,7 @@
 import re
+import warnings
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import TracebackType
 from typing import Any, Self
 
@@ -22,6 +23,7 @@ from pydantic import SecretStr
 
 # .NET JSON date: milliseconds since the Unix epoch (always UTC), optional offset suffix
 _NET_DATE = re.compile(r"/Date\((-?\d+)(?:[+-]\d{4})?\)/")
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 def parse_timestamp_utc(value: Any) -> datetime:
@@ -33,14 +35,21 @@ def parse_timestamp_utc(value: Any) -> datetime:
     upstream interprets them; anything else still goes through upstream's parser.
     """
     if isinstance(value, str) and (match := _NET_DATE.search(value)):
-        return datetime.fromtimestamp(int(match.group(1)) / 1000, UTC)
+        return _EPOCH + timedelta(milliseconds=int(match.group(1)))
     parsed = utils.parse_timestamp_from_api(value)
     # Upstream's parser yields local time when it doesn't attach a timezone
     return parsed.astimezone(UTC)
 
 
 # Every upstream model date field is parsed through this name in the base model
-models_base.parse_timestamp_from_api = parse_timestamp_utc  # type: ignore[attr-defined]
+if hasattr(models_base, "parse_timestamp_from_api"):
+    models_base.parse_timestamp_from_api = parse_timestamp_utc
+else:
+    warnings.warn(
+        "bing_webmaster_tools.models.base no longer uses parse_timestamp_from_api; "
+        "API dates may be returned without a UTC offset (#6)",
+        stacklevel=1,
+    )
 
 
 @dataclass

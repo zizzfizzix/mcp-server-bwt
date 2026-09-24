@@ -1,5 +1,6 @@
 import asyncio
 import time
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -39,21 +40,55 @@ def _query_stats(date: str) -> dict[str, object]:
     }
 
 
+@pytest.fixture
+def set_tz(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[[str], None]]:
+    """Switch the process timezone, restoring it (env and C-level) afterwards."""
+
+    def apply(tz: str) -> None:
+        monkeypatch.setenv("TZ", tz)
+        time.tzset()
+
+    yield apply
+    monkeypatch.undo()
+    time.tzset()
+
+
 @pytest.mark.parametrize("tz", ["UTC", "America/New_York", "Asia/Tokyo"])
 @pytest.mark.parametrize(
     "date", ["/Date(1781222400000)/", "/Date(1781222400000+0200)/"]
 )
 def test_api_dates_serialize_as_utc_rfc3339(
-    monkeypatch: pytest.MonkeyPatch, tz: str, date: str
+    set_tz: Callable[[str], None], tz: str, date: str
 ) -> None:
     """Regression for #6: dates carry a UTC offset and don't depend on the server timezone."""
-    monkeypatch.setenv("TZ", tz)
-    time.tzset()
-    try:
-        stats = QueryStats.model_validate(_query_stats(date))
-    finally:
-        monkeypatch.delenv("TZ")
-        time.tzset()
+    set_tz(tz)
+
+    stats = QueryStats.model_validate(_query_stats(date))
+
+    assert stats.model_dump(mode="json")["date"] == "2026-06-12T00:00:00Z"
+
+
+def test_net_dates_are_exact_and_cover_the_full_range() -> None:
+    """#6: millisecond precision and .NET DateTime.MinValue/MaxValue decode exactly."""
+    assert parse_timestamp_utc("/Date(253402300799999)/") == datetime(
+        9999, 12, 31, 23, 59, 59, 999000, tzinfo=UTC
+    )
+    assert parse_timestamp_utc("/Date(-62135596800000)/") == datetime(
+        1, 1, 1, tzinfo=UTC
+    )
+
+
+def test_net_dates_do_not_depend_on_upstream_parser(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#6: /Date(ms)/ is decoded here, so an upstream fix (or regression) can't change it."""
+
+    def upstream(_value: object) -> datetime:
+        raise AssertionError("upstream parser must not be used for /Date(ms)/")
+
+    monkeypatch.setattr(utils, "parse_timestamp_from_api", upstream)
+
+    stats = QueryStats.model_validate(_query_stats("/Date(1781222400000)/"))
 
     assert stats.model_dump(mode="json")["date"] == "2026-06-12T00:00:00Z"
 
@@ -61,25 +96,28 @@ def test_api_dates_serialize_as_utc_rfc3339(
 @pytest.mark.parametrize(
     "upstream_result",
     [
-        datetime(2026, 6, 12, tzinfo=UTC),  # upstream fixed: aware UTC
-        datetime(2026, 6, 12, 2, tzinfo=timezone(timedelta(hours=2))),  # aware, offset
-        datetime(2026, 6, 12),  # noqa: DTZ001  (upstream "fixed" to naive UTC)
+        datetime(2026, 6, 12, tzinfo=UTC),
+        datetime(2026, 6, 12, 2, tzinfo=timezone(timedelta(hours=2))),
+        datetime(2026, 6, 12, 9),  # noqa: DTZ001  (naive local time, as upstream does today)
     ],
 )
-def test_api_dates_independent_of_upstream_parser(
-    monkeypatch: pytest.MonkeyPatch, upstream_result: datetime
+def test_other_formats_fall_back_to_upstream_as_utc(
+    monkeypatch: pytest.MonkeyPatch,
+    set_tz: Callable[[str], None],
+    upstream_result: datetime,
 ) -> None:
-    """#6: the fix keeps working whatever upstream's parser returns for /Date(ms)/."""
+    """#6: a format only upstream understands still comes back UTC-aware."""
+    set_tz("Asia/Tokyo")
     monkeypatch.setattr(
         utils, "parse_timestamp_from_api", lambda _value: upstream_result
     )
 
-    stats = QueryStats.model_validate(_query_stats("/Date(1781222400000)/"))
-
-    assert stats.model_dump(mode="json")["date"] == "2026-06-12T00:00:00Z"
+    assert parse_timestamp_utc("some-future-format") == datetime(
+        2026, 6, 12, tzinfo=UTC
+    )
 
 
 def test_unparseable_api_date_still_raises() -> None:
-    """#6: non-/Date(ms)/ input keeps upstream's error instead of a silent default."""
+    """#6: unknown input keeps upstream's error instead of a silent default."""
     with pytest.raises(ValueError, match="Unable to parse date"):
         parse_timestamp_utc("2026-06-12")
