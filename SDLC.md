@@ -113,7 +113,7 @@ Every PR passes the full validation gate before review sign-off, in this order:
 - `uv run mypy --strict mcp_server_bwt/`
 - `uv build`
 
-Any non-zero exit fails the gate and blocks the PR. The implementing skills run the gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. The command list lives in `.ai/agentic.config.json`. CI runs the same gate: `.github/workflows/ci.yml` (job `validate`) runs these commands, plus an import smoke test with a dummy API key, on every PR and every push to `main`. `validate` is meant to be a required status check on the `main` ruleset (added after the workflow lands, see #11). Once it is, a PR with a failing gate can't merge. When the command list changes, update `.ai/agentic.config.json`, the workflow steps and this section together.
+Any non-zero exit fails the gate and blocks the PR. The implementing skills run the gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. The command list lives in `.ai/agentic.config.json`. CI runs the same gate: `.github/workflows/ci.yml` (job `validate`) runs these commands, plus an import smoke test with a dummy API key, on every PR and every push to `main`. `validate` is a required status check on the `main` ruleset, so a PR with a failing gate can't merge. When the command list changes, update `.ai/agentic.config.json`, the workflow steps and this section together.
 
 ## Amending this process
 

@@ -11,7 +11,7 @@ Add `.github/workflows/ci.yml` with one job, `validate`, that runs the four vali
 
 A new `.github/workflows/ci.yml`, plus the `AGENTS.md` CI row and the `SDLC.md` Validation gate section. No runtime code changes. The spec file itself merges through spec PR #26 and isn't committed here.
 
-**Non-goals:** the ruleset change (spec Phase 2, steps 5–6, a post-merge action that needs the maintainer's approval), pytest in CI, a Python matrix, SHA pinning or Dependabot, and the Makefile `build` fix (already done in #24).
+**Non-goals:** applying the ruleset change (spec Phase 2). The maintainer applied it on 2026-09-24: ruleset 12497565 now requires `validate` (integration 15368, non-strict). pytest in CI, a Python matrix, SHA pinning or Dependabot, and the Makefile `build` fix (already done in #24).
 
 ## Risks
 
