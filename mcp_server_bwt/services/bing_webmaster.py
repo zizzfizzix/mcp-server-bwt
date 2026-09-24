@@ -32,10 +32,19 @@ def parse_timestamp_utc(value: Any) -> datetime:
     Upstream returns a naive datetime in the server's local time, which serializes
     without an offset and fails MCP clients' RFC 3339 ``date-time`` check (#6).
     ``/Date(ms)/`` values are decoded here so the result doesn't depend on how
-    upstream interprets them; anything else still goes through upstream's parser.
+    upstream interprets them. RFC 3339 date-times, which is how the models serialize
+    dates, are accepted too, so a dumped row validates again (mcp re-validates
+    paged results, #39). Anything else still goes through upstream's parser.
     """
     if isinstance(value, str) and (match := _NET_DATE.search(value)):
         return _EPOCH + timedelta(milliseconds=int(match.group(1)))
+    if isinstance(value, str) and "T" in value:
+        try:
+            iso = datetime.fromisoformat(value)
+        except ValueError:
+            pass
+        else:
+            return iso.astimezone(UTC) if iso.tzinfo else iso.replace(tzinfo=UTC)
     parsed = utils.parse_timestamp_from_api(value)
     # Upstream's parser yields local time when it doesn't attach a timezone
     return parsed.astimezone(UTC)

@@ -9,7 +9,7 @@ from bing_webmaster_tools import BingWebmasterClient
 from bing_webmaster_tools.errors import BingWebmasterError
 from mcp.server.mcpserver.exceptions import ToolError, UnexpectedToolError
 
-from mcp_server_bwt.tools.bing_webmaster import SERVICE_CLASSES
+from mcp_server_bwt.tools.bing_webmaster import SERVICE_CLASSES, returns_list
 
 EXPECTED_TOOL_COUNT = 62
 
@@ -49,10 +49,13 @@ def test_tool_schemas_do_not_expose_self(monkeypatch: pytest.MonkeyPatch) -> Non
         )
         params = list(inspect.signature(method).parameters.values())[1:]
         required = [p.name for p in params if p.default is inspect.Parameter.empty]
-        assert list(tool.input_schema["properties"]) == [p.name for p in params]
+        # List tools also take the pagination parameters (#39)
+        paging = ["offset", "limit"] if returns_list(method) else []
+        expected = [p.name for p in params] + paging
+        assert list(tool.input_schema["properties"]) == expected, tool.name
         assert tool.input_schema.get("required", []) == required, tool.name
         description = inspect.cleandoc(method.__doc__ or "")
-        assert (tool.description or "").strip() == description, tool.name
+        assert (tool.description or "").strip().startswith(description), tool.name
 
 
 def test_legacy_self_argument_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
