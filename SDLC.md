@@ -32,6 +32,10 @@ Before intake, the work is shaped: `om-brainstorm` turns a single idea or questi
 
 After merge, this process stops. Deployment, smoke tests, monitoring, and rollback belong to the repository's release process, not to this document: the Maintainer — or a release manager, when the team names one — drafts the changelog with `om-auto-update-changelog` and reconciles the tracker with `om-close-fixed-issues`, and `om-pipeline-retro` reads finished runs to rank what second passes cost. Merge is where this document ends; delivering the change to users is a separate process the team owns.
 
+### Releasing
+
+Releases are cut by [release-please](https://github.com/googleapis/release-please-action). After every push to `main` it opens or updates one `chore(main): release X.Y.Z` PR from the Conventional Commit titles merged since the last tag. Merging that PR is how a release is made: it bumps `mcp_server_bwt/version.py`, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub release. The Maintainer decides when to merge it. PR titles therefore matter: `fix:` releases a patch, `feat:` a minor, a breaking change (`!` or `BREAKING CHANGE:`) a minor while pre-1.0, and `chore:`/`docs:`/`refactor:` release nothing on their own. `om-auto-update-changelog` is still available for ad-hoc notes, but `CHANGELOG.md` is generated.
+
 ## Label state machine
 
 Pipeline labels are mutually exclusive: a PR carries at most one, and it names where the PR sits in the flow.

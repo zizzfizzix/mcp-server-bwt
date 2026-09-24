@@ -39,7 +39,7 @@ These rules apply to every PR in `mcp-server-bwt`, whether a human or `om-code-r
 ### Dependencies and packaging
 
 - Dependency changes go through `pyproject.toml` (and the uv lockfile when one is committed). An upgrade of `bing-webmaster-tools` or `mcp` can silently change tool signatures. Check the tool list against the new version before approving.
-- Version bumps edit `mcp_server_bwt/version.py` only.
+- Versions are owned by release-please (`SDLC.md`, *Releasing*). Only the bot's `chore(main): release X.Y.Z` PR edits `mcp_server_bwt/version.py`, `CHANGELOG.md` and `.release-please-manifest.json`. A hand edit in any other PR is a finding, and the fix is a Conventional Commit PR title that produces the intended bump.
 
 ### Tests
 
