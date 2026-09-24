@@ -21,11 +21,13 @@ A new `.github/workflows/ci.yml`, plus the `AGENTS.md` CI row and the `SDLC.md` 
 
 ## Progress
 
+PR: #27
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Workflow and docs
 
 - [x] 1.1 Add the CI workflow with the validate job — 2e3e3d9
-- [ ] 1.2 Prove validate fails on a gate finding
+- [x] 1.2 Prove validate fails on a gate finding — b99c760 (red run 35986847346), reverted 4506cfa
 - [x] 1.3 Replace the CI row in AGENTS.md — 4a8cc72
 - [x] 1.4 Document the workflow in the SDLC.md validation gate — 6bc5f1e
