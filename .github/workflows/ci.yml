@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The job id is the required-check context on the main ruleset. Never rename it.
+  # The job id is the check name the main ruleset is to require (#11). Never rename it.
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
