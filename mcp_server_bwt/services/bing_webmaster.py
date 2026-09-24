@@ -1,8 +1,12 @@
+import re
+import warnings
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from types import TracebackType
-from typing import Self
+from typing import Any, Self
 
-from bing_webmaster_tools import BingWebmasterClient, Settings
+from bing_webmaster_tools import BingWebmasterClient, Settings, utils
+from bing_webmaster_tools.models import base as models_base
 from bing_webmaster_tools.services import (
     content_blocking,
     content_management,
@@ -16,6 +20,36 @@ from bing_webmaster_tools.services import (
     url_management,
 )
 from pydantic import SecretStr
+
+# .NET JSON date: milliseconds since the Unix epoch (always UTC), optional offset suffix
+_NET_DATE = re.compile(r"/Date\((-?\d+)(?:[+-]\d{4})?\)/")
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def parse_timestamp_utc(value: Any) -> datetime:
+    """Parse an API date into a UTC-aware datetime.
+
+    Upstream returns a naive datetime in the server's local time, which serializes
+    without an offset and fails MCP clients' RFC 3339 ``date-time`` check (#6).
+    ``/Date(ms)/`` values are decoded here so the result doesn't depend on how
+    upstream interprets them; anything else still goes through upstream's parser.
+    """
+    if isinstance(value, str) and (match := _NET_DATE.search(value)):
+        return _EPOCH + timedelta(milliseconds=int(match.group(1)))
+    parsed = utils.parse_timestamp_from_api(value)
+    # Upstream's parser yields local time when it doesn't attach a timezone
+    return parsed.astimezone(UTC)
+
+
+# Every upstream model date field is parsed through this name in the base model
+if hasattr(models_base, "parse_timestamp_from_api"):
+    models_base.parse_timestamp_from_api = parse_timestamp_utc
+else:
+    warnings.warn(
+        "bing_webmaster_tools.models.base no longer uses parse_timestamp_from_api; "
+        "API dates may be returned without a UTC offset (#6)",
+        stacklevel=1,
+    )
 
 
 @dataclass
