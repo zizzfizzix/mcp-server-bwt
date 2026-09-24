@@ -33,6 +33,8 @@ Skip `validate` on release-please PRs from this repository while the required `v
 
 ## Progress
 
+PR: #33
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Workflow condition and docs
