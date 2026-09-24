@@ -11,7 +11,7 @@ def test_service_context_manager_returns_self_and_propagates_errors() -> None:
 
     async def run() -> None:
         async with service as entered:
-            assert entered is not service
+            assert entered is not service  # deliberate break (#30 negative evidence), reverted next commit
             assert entered.client is not None
             assert entered.sites is not None
             raise KeyError("boom")
