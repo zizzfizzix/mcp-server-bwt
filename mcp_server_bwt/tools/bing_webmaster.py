@@ -144,7 +144,9 @@ class ResultCache:
 
 
 # The list caches of each service area, per service instance, so a write tool
-# can clear the lists it may have changed (#44)
+# can clear the lists it may have changed (#44). Site writes (removing a site
+# or a role) change what every area returns for that site, so they clear all.
+GLOBAL_WRITE_AREA = "sites"
 _AREA_CACHES: weakref.WeakKeyDictionary[
     BingWebmasterService, dict[str, list[ResultCache]]
 ] = weakref.WeakKeyDictionary()
@@ -303,10 +305,17 @@ def wrap_service_method(
     page_size = resolve_page_size() if paged else None
     cache = ResultCache(resolve_cache_ttl()) if paged else None
     # Shared by every tool of this service area, including ones registered later
-    area_caches = _AREA_CACHES.setdefault(service, {}).setdefault(service_attr, [])
+    areas = _AREA_CACHES.setdefault(service, {})
     if cache is not None:
-        area_caches.append(cache)
+        areas.setdefault(service_attr, []).append(cache)
     clears_area = is_write_tool(method_name, paged)
+
+    def clear_written_caches() -> None:
+        for attr, caches in areas.items():
+            if service_attr in (attr, GLOBAL_WRITE_AREA):
+                for area_cache in caches:
+                    area_cache.clear()
+
     doc = original_method.__doc__
     if paged:
         collisions = {"offset", "limit"} & {p.name for p in parameters}
@@ -331,7 +340,7 @@ def wrap_service_method(
         key = cache_key(args, kwargs) if cache is not None else b""
         if cache is not None and (rows := cache.get(key)) is not None:
             return page_result(rows, offset, limit)
-        generation = cache.generation if cache is not None else 0
+        generation = cache.generation if cache is not None else None
         async with service as s:
             service_obj = getattr(s, service_attr)
             # Get the method from the instance
@@ -346,8 +355,7 @@ def wrap_service_method(
             finally:
                 # A failed write may still have changed data upstream
                 if clears_area:
-                    for area_cache in area_caches:
-                        area_cache.clear()
+                    clear_written_caches()
         if cache is None:
             return result
         cache.put(key, result, generation)

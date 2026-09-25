@@ -11,7 +11,7 @@ from bing_webmaster_tools import BingWebmasterClient
 from bing_webmaster_tools.errors import BingWebmasterError
 from bing_webmaster_tools.models.content_blocking import BlockedUrl
 from bing_webmaster_tools.models.content_management import UrlInfo
-from bing_webmaster_tools.models.crawling import CrawlSettings
+from bing_webmaster_tools.models.crawling import CrawlSettings, UrlWithCrawlIssues
 from bing_webmaster_tools.models.traffic_analysis import QueryStats
 from bing_webmaster_tools.services.traffic_analysis import TrafficAnalysisService
 from mcp.client.client import Client
@@ -34,6 +34,7 @@ from mcp_server_bwt.tools.bing_webmaster import (
     ResultCache,
     add_bing_webmaster_tools,
     cache_key,
+    is_write_tool,
     page_result,
     paginate,
     resolve_cache_ttl,
@@ -569,7 +570,9 @@ def test_result_cache_ignores_lists_fetched_before_a_clear() -> None:
 
 
 def _area_server(
-    monkeypatch: pytest.MonkeyPatch, fail_writes: bool = False
+    monkeypatch: pytest.MonkeyPatch,
+    fail_writes: bool = False,
+    write_during_read: bool = False,
 ) -> tuple[MCPServer, list[str]]:
     """A server whose Bing client records the endpoint of each upstream request."""
     monkeypatch.delenv(PAGE_SIZE_ENV, raising=False)
@@ -578,13 +581,21 @@ def _area_server(
     responses: dict[str, Any] = {
         "GetBlockedUrls": [_raw_row(BlockedUrl)],
         "GetCrawlSettings": _raw_row(CrawlSettings),
+        "GetCrawlIssues": [_raw_row(UrlWithCrawlIssues)],
         "AddBlockedUrl": None,
+        "RemoveSite": None,
     }
 
     async def fake_request(
         self: BingWebmasterClient, method: str, endpoint: str, *args: Any, **kw: Any
     ) -> dict[str, Any]:
         endpoints.append(endpoint)
+        if write_during_read and endpoint == "GetBlockedUrls" and len(endpoints) == 1:
+            # The list is fetched, then a write lands before the read returns
+            await mcp.call_tool(
+                "add_blocked_url",
+                {"site_url": "https://example.com/", "blocked_url": "https://a/"},
+            )
         if fail_writes and endpoint == "AddBlockedUrl":
             raise BingWebmasterError("write failed")
         return {"d": responses.get(endpoint, [_query_stats(0)])}
@@ -618,15 +629,82 @@ def test_write_tools_clear_their_areas_lists(
     assert endpoints.count("GetBlockedUrls") == 2
 
 
+def test_a_read_racing_a_write_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#44: a list fetched before a write finished must not be served afterwards."""
+    mcp, endpoints = _area_server(monkeypatch, write_during_read=True)
+
+    _tool(mcp, "get_blocked_urls")
+    _tool(mcp, "get_blocked_urls")
+
+    assert endpoints == ["GetBlockedUrls", "AddBlockedUrl", "GetBlockedUrls"]
+
+
+def test_site_writes_clear_every_area(monkeypatch: pytest.MonkeyPatch) -> None:
+    """#44: removing a site changes what every area returns for it."""
+    mcp, endpoints = _area_server(monkeypatch)
+
+    _tool(mcp, "get_query_stats")
+    _tool(mcp, "get_blocked_urls")
+    _tool(mcp, "remove_site")
+    _tool(mcp, "get_query_stats")
+    _tool(mcp, "get_blocked_urls")
+
+    assert endpoints.count("GetQueryStats") == 2
+    assert endpoints.count("GetBlockedUrls") == 2
+
+
 def test_reads_and_other_areas_keep_the_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """#44: `get_` tools and writes in another area leave cached lists alone."""
     mcp, endpoints = _area_server(monkeypatch)
 
-    _tool(mcp, "get_query_stats")
+    _tool(mcp, "get_crawl_issues")
     _tool(mcp, "get_crawl_settings")
     _tool(mcp, "add_blocked_url", blocked_url="https://example.com/a")
-    _tool(mcp, "get_query_stats")
+    _tool(mcp, "get_crawl_issues")
 
-    assert endpoints.count("GetQueryStats") == 1
+    assert endpoints.count("GetCrawlIssues") == 1
+
+
+def test_write_tools_are_exactly_the_mutating_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#44: pins which tools clear caches, so a new upstream read isn't one."""
+    tools = asyncio.run(_server(monkeypatch, 0).list_tools())
+    writes = {
+        t.name
+        for t in tools
+        if is_write_tool(t.name, paged="limit" in t.input_schema["properties"])
+    }
+
+    assert writes == {
+        "add_blocked_url",
+        "add_connected_page",
+        "add_country_region_settings",
+        "add_deep_link_block",
+        "add_page_preview_block",
+        "add_query_parameter",
+        "add_site",
+        "add_site_roles",
+        "enable_disable_query_parameter",
+        "fetch_url",
+        "remove_blocked_url",
+        "remove_country_region_settings",
+        "remove_deep_link_block",
+        "remove_feed",
+        "remove_page_preview_block",
+        "remove_query_parameter",
+        "remove_site",
+        "remove_site_role",
+        "save_crawl_settings",
+        "submit_content",
+        "submit_feed",
+        "submit_site_move",
+        "submit_url",
+        "submit_url_batch",
+        "update_deep_link",
+        "verify_site",
+    }
