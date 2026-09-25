@@ -1,6 +1,7 @@
 import inspect
 import os
 import time
+import weakref
 from collections.abc import Callable, Mapping, Sequence
 from functools import wraps
 from typing import Annotated, Any, TypeVar, get_origin, get_type_hints
@@ -106,13 +107,19 @@ class ResultCache:
     """A small in-memory cache of upstream lists, each kept for `ttl` seconds.
 
     Holds at most `max_entries` lists and evicts the oldest first. A `ttl` of
-    0 disables it.
+    0 disables it. `clear()` drops every entry and bumps `generation`, so a
+    list fetched before the clear is not stored after it.
     """
 
     def __init__(self, ttl: int, max_entries: int = CACHE_MAX_ENTRIES) -> None:
         self.ttl = ttl
         self.max_entries = max_entries
+        self.generation = 0
         self._entries: dict[bytes, tuple[float, list[Any]]] = {}
+
+    def clear(self) -> None:
+        self._entries.clear()
+        self.generation += 1
 
     def get(self, key: bytes) -> list[Any] | None:
         entry = self._entries.get(key)
@@ -124,8 +131,8 @@ class ResultCache:
             return None
         return rows
 
-    def put(self, key: bytes, rows: list[Any]) -> None:
-        if self.ttl <= 0:
+    def put(self, key: bytes, rows: list[Any], generation: int | None = None) -> None:
+        if self.ttl <= 0 or generation not in (None, self.generation):
             return
         now = time.monotonic()
         for stale in [k for k, (exp, _) in self._entries.items() if exp <= now]:
@@ -134,6 +141,24 @@ class ResultCache:
         while len(self._entries) >= self.max_entries:
             del self._entries[next(iter(self._entries))]
         self._entries[key] = (now + self.ttl, rows)
+
+
+# The list caches of each service area, per service instance, so a write tool
+# can clear the lists it may have changed (#44)
+_AREA_CACHES: weakref.WeakKeyDictionary[
+    BingWebmasterService, dict[str, list[ResultCache]]
+] = weakref.WeakKeyDictionary()
+
+
+def is_write_tool(method_name: str, paged: bool) -> bool:
+    """Whether a tool may change data: anything but a list tool or a `get_` tool.
+
+    >>> is_write_tool("add_blocked_url", paged=False)
+    True
+    >>> is_write_tool("get_crawl_settings", paged=False)
+    False
+    """
+    return not paged and not method_name.startswith("get_")
 
 
 def paginate[R](
@@ -277,6 +302,11 @@ def wrap_service_method(
     paged = returns_list(original_method)
     page_size = resolve_page_size() if paged else None
     cache = ResultCache(resolve_cache_ttl()) if paged else None
+    # Shared by every tool of this service area, including ones registered later
+    area_caches = _AREA_CACHES.setdefault(service, {}).setdefault(service_attr, [])
+    if cache is not None:
+        area_caches.append(cache)
+    clears_area = is_write_tool(method_name, paged)
     doc = original_method.__doc__
     if paged:
         collisions = {"offset", "limit"} & {p.name for p in parameters}
@@ -301,6 +331,7 @@ def wrap_service_method(
         key = cache_key(args, kwargs) if cache is not None else b""
         if cache is not None and (rows := cache.get(key)) is not None:
             return page_result(rows, offset, limit)
+        generation = cache.generation if cache is not None else 0
         async with service as s:
             service_obj = getattr(s, service_attr)
             # Get the method from the instance
@@ -312,9 +343,14 @@ def wrap_service_method(
                 # mcp 2.x only forwards the message of a ToolError to the client;
                 # ValueError includes pydantic.ValidationError
                 raise ToolError(str(exc)) from exc
+            finally:
+                # A failed write may still have changed data upstream
+                if clears_area:
+                    for area_cache in area_caches:
+                        area_cache.clear()
         if cache is None:
             return result
-        cache.put(key, result)
+        cache.put(key, result, generation)
         return page_result(result, offset, limit)
 
     # Copy signature and docstring before registering, because mcp.tool()

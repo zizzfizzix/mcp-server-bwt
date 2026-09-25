@@ -9,7 +9,9 @@ from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 import pytest
 from bing_webmaster_tools import BingWebmasterClient
 from bing_webmaster_tools.errors import BingWebmasterError
+from bing_webmaster_tools.models.content_blocking import BlockedUrl
 from bing_webmaster_tools.models.content_management import UrlInfo
+from bing_webmaster_tools.models.crawling import CrawlSettings
 from bing_webmaster_tools.models.traffic_analysis import QueryStats
 from bing_webmaster_tools.services.traffic_analysis import TrafficAnalysisService
 from mcp.client.client import Client
@@ -552,3 +554,79 @@ def test_invalid_cache_ttl_env_fails_registration(
 ) -> None:
     with pytest.raises(ValueError, match=CACHE_TTL_ENV):
         _counting_server(monkeypatch, ttl="-5")
+
+
+def test_result_cache_ignores_lists_fetched_before_a_clear() -> None:
+    """#44: a read that raced a write must not store the pre-write list."""
+    cache = ResultCache(ttl=10)
+    generation = cache.generation
+    cache.clear()
+    cache.put(b"k", [1], generation)
+
+    assert cache.get(b"k") is None
+    cache.put(b"k", [2], cache.generation)
+    assert cache.get(b"k") == [2]
+
+
+def _area_server(
+    monkeypatch: pytest.MonkeyPatch, fail_writes: bool = False
+) -> tuple[MCPServer, list[str]]:
+    """A server whose Bing client records the endpoint of each upstream request."""
+    monkeypatch.delenv(PAGE_SIZE_ENV, raising=False)
+    monkeypatch.delenv(CACHE_TTL_ENV, raising=False)
+    endpoints: list[str] = []
+    responses: dict[str, Any] = {
+        "GetBlockedUrls": [_raw_row(BlockedUrl)],
+        "GetCrawlSettings": _raw_row(CrawlSettings),
+        "AddBlockedUrl": None,
+    }
+
+    async def fake_request(
+        self: BingWebmasterClient, method: str, endpoint: str, *args: Any, **kw: Any
+    ) -> dict[str, Any]:
+        endpoints.append(endpoint)
+        if fail_writes and endpoint == "AddBlockedUrl":
+            raise BingWebmasterError("write failed")
+        return {"d": responses.get(endpoint, [_query_stats(0)])}
+
+    monkeypatch.setattr(BingWebmasterClient, "request", fake_request)
+    mcp = MCPServer("test")
+    add_bing_webmaster_tools(mcp, BingWebmasterService("dummy"))
+    return mcp, endpoints
+
+
+def _tool(mcp: MCPServer, name: str, **arguments: Any) -> None:
+    asyncio.run(mcp.call_tool(name, {"site_url": "https://example.com/"} | arguments))
+
+
+@pytest.mark.parametrize("fail_writes", [False, True])
+def test_write_tools_clear_their_areas_lists(
+    monkeypatch: pytest.MonkeyPatch, fail_writes: bool
+) -> None:
+    """#44: a list read after a write in its area (even a failed one) is fresh."""
+    mcp, endpoints = _area_server(monkeypatch, fail_writes)
+
+    _tool(mcp, "get_blocked_urls")
+    _tool(mcp, "get_blocked_urls")
+    assert endpoints.count("GetBlockedUrls") == 1
+    try:
+        _tool(mcp, "add_blocked_url", blocked_url="https://example.com/a")
+    except ToolError:
+        assert fail_writes
+    _tool(mcp, "get_blocked_urls")
+
+    assert endpoints.count("GetBlockedUrls") == 2
+
+
+def test_reads_and_other_areas_keep_the_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#44: `get_` tools and writes in another area leave cached lists alone."""
+    mcp, endpoints = _area_server(monkeypatch)
+
+    _tool(mcp, "get_query_stats")
+    _tool(mcp, "get_crawl_settings")
+    _tool(mcp, "add_blocked_url", blocked_url="https://example.com/a")
+    _tool(mcp, "get_query_stats")
+
+    assert endpoints.count("GetQueryStats") == 1
