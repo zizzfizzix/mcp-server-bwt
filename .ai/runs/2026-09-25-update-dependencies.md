@@ -48,7 +48,7 @@ Inventory taken 2026-09-25 against PyPI, GitHub releases and endoflife.date:
 
 ### Phase 1: Python dependencies
 
-- [ ] 1.1 Refresh uv.lock
+- [x] 1.1 Refresh uv.lock — 78b2a3c
 
 ### Phase 2: Toolchain pins
 
