@@ -27,6 +27,8 @@ Upload every release that release-please creates to PyPI as `mcp-server-bwt` thr
 - [x] 1.2 Build targets — 3410c36
 - [x] 1.3 Workflow — 41a3deb
 
+- [x] Post-review fix: gate `publish` on `needs.build.result` so `workflow_dispatch` backfills upload — 89a6fbd
+
 ### Phase 2: Docs
 
 - [x] 2.1 README and packaging test — 8fd67ba
