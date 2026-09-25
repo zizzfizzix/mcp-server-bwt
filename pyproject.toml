@@ -45,6 +45,10 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["mcp_server_bwt"]
+exclude = ["mcp_server_bwt/test_*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = ["mcp_server_bwt/", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
 
 [tool.hatch.version]
 path = "mcp_server_bwt/version.py"
