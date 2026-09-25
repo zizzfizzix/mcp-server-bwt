@@ -52,8 +52,8 @@ Inventory taken 2026-09-25 against PyPI, GitHub releases and endoflife.date:
 
 ### Phase 2: Toolchain pins
 
-- [ ] 2.1 Bump Python pin to 3.13.15
-- [ ] 2.2 Bump uv pin to 0.12.19
+- [x] 2.1 Bump Python pin to 3.13.15 — 5464bfc
+- [x] 2.2 Bump uv pin to 0.12.19 — 17c6592
 
 ### Phase 3: CI actions
 
