@@ -44,6 +44,8 @@ Inventory taken 2026-09-25 against PyPI, GitHub releases and endoflife.date:
 
 ## Progress
 
+PR: #47
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Python dependencies
