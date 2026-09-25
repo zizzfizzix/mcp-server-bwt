@@ -24,14 +24,14 @@ jobs:
       contents: write
       pull-requests: write
     outputs:
-      # The manifest package is ".", so v4 emits these without a "<path>--" prefix.
+      # The manifest package is ".", so the action emits these without a "<path>--" prefix.
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       # Set the RELEASE_PLEASE_TOKEN secret (fine-grained PAT or GitHub App token) once
       # required checks exist on main: PRs opened with the default token do not trigger
       # other workflows, so their checks would never run.
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         id: release
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
