@@ -23,9 +23,9 @@ Upload every release that release-please creates to PyPI as `mcp-server-bwt` thr
 
 ### Phase 1: Packaging and publish pipeline
 
-- [ ] 1.1 Metadata
-- [ ] 1.2 Build targets
-- [ ] 1.3 Workflow
+- [x] 1.1 Metadata — 0a0fe67
+- [x] 1.2 Build targets — 3410c36
+- [x] 1.3 Workflow — 41a3deb
 
 ### Phase 2: Docs
 
