@@ -29,5 +29,5 @@ Upload every release that release-please creates to PyPI as `mcp-server-bwt` thr
 
 ### Phase 2: Docs
 
-- [ ] 2.1 README and packaging test
-- [ ] 2.2 AGENTS.md, SDLC.md, BACKWARD_COMPATIBILITY.md, CODE_REVIEW.md
+- [x] 2.1 README and packaging test — 8fd67ba
+- [x] 2.2 AGENTS.md, SDLC.md, BACKWARD_COMPATIBILITY.md, CODE_REVIEW.md — 743148e
