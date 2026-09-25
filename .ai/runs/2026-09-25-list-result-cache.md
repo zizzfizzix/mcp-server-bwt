@@ -37,3 +37,4 @@ PR: #46
 ### Phase 2: Clear cached lists on writes
 
 - [x] 2.1 Write tools clear their area's list caches, with a generation guard against a racing read — 4c11736
+- [x] Post-review fix: site writes clear every area, wrapper-level race test, pinned write-tool set — d2c79fe
