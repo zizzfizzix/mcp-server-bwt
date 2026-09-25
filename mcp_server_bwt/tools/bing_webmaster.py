@@ -1,5 +1,6 @@
 import inspect
 import os
+import time
 from collections.abc import Callable, Mapping, Sequence
 from functools import wraps
 from typing import Annotated, Any, TypeVar, get_origin, get_type_hints
@@ -34,6 +35,13 @@ MAX_PAGE_SIZE = 500
 PAGE_SIZE_ENV = "BING_WEBMASTER_PAGE_SIZE"
 PAGINATION_META_KEY = "mcp-server-bwt/pagination"
 
+# Caching of list results (#44): later pages of the same query are sliced from
+# the cached upstream list instead of downloading it again
+DEFAULT_CACHE_TTL = 300
+MAX_CACHE_TTL = 86400
+CACHE_TTL_ENV = "BING_WEBMASTER_CACHE_TTL"
+CACHE_MAX_ENTRIES = 16
+
 
 def resolve_page_size(environ: Mapping[str, str] = os.environ) -> int | None:
     """Return the default `limit` for list tools, or None when paging is disabled.
@@ -57,6 +65,75 @@ def resolve_page_size(environ: Mapping[str, str] = os.environ) -> int | None:
             f"{PAGE_SIZE_ENV} must be an integer between 0 and {MAX_PAGE_SIZE}"
         )
     return value or None
+
+
+def resolve_cache_ttl(environ: Mapping[str, str] = os.environ) -> int:
+    """Return how many seconds list tool results are cached, 0 when disabled.
+
+    >>> resolve_cache_ttl({})
+    300
+    >>> resolve_cache_ttl({"BING_WEBMASTER_CACHE_TTL": "0"})
+    0
+    >>> resolve_cache_ttl({"BING_WEBMASTER_CACHE_TTL": "60"})
+    60
+    """
+    raw = environ.get(CACHE_TTL_ENV, "").strip()
+    if not raw:
+        return DEFAULT_CACHE_TTL
+    try:
+        value = int(raw)
+    except ValueError:
+        value = -1
+    if not 0 <= value <= MAX_CACHE_TTL:
+        raise ValueError(
+            f"{CACHE_TTL_ENV} must be an integer between 0 and {MAX_CACHE_TTL}"
+        )
+    return value
+
+
+def cache_key(args: Sequence[Any], kwargs: Mapping[str, Any]) -> bytes:
+    """A hashable key for an upstream call's arguments.
+
+    >>> cache_key((), {"b": 2, "a": "x"}) == cache_key((), {"a": "x", "b": 2})
+    True
+    >>> cache_key((), {"a": "x"}) == cache_key((), {"a": "y"})
+    False
+    """
+    return pydantic_core.to_json([list(args), sorted(kwargs.items())], fallback=str)
+
+
+class ResultCache:
+    """A small in-memory cache of upstream lists, each kept for `ttl` seconds.
+
+    Holds at most `max_entries` lists and evicts the oldest first. A `ttl` of
+    0 disables it.
+    """
+
+    def __init__(self, ttl: int, max_entries: int = CACHE_MAX_ENTRIES) -> None:
+        self.ttl = ttl
+        self.max_entries = max_entries
+        self._entries: dict[bytes, tuple[float, list[Any]]] = {}
+
+    def get(self, key: bytes) -> list[Any] | None:
+        entry = self._entries.get(key)
+        if entry is None:
+            return None
+        expires_at, rows = entry
+        if time.monotonic() >= expires_at:
+            del self._entries[key]
+            return None
+        return rows
+
+    def put(self, key: bytes, rows: list[Any]) -> None:
+        if self.ttl <= 0:
+            return
+        now = time.monotonic()
+        for stale in [k for k, (exp, _) in self._entries.items() if exp <= now]:
+            del self._entries[stale]
+        self._entries.pop(key, None)
+        while len(self._entries) >= self.max_entries:
+            del self._entries[next(iter(self._entries))]
+        self._entries[key] = (now + self.ttl, rows)
 
 
 def paginate[R](
@@ -199,6 +276,7 @@ def wrap_service_method(
 
     paged = returns_list(original_method)
     page_size = resolve_page_size() if paged else None
+    cache = ResultCache(resolve_cache_ttl()) if paged else None
     doc = original_method.__doc__
     if paged:
         collisions = {"offset", "limit"} & {p.name for p in parameters}
@@ -220,6 +298,9 @@ def wrap_service_method(
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         offset: int = kwargs.pop("offset", 0) if paged else 0
         limit: int | None = kwargs.pop("limit", page_size) if paged else None
+        key = cache_key(args, kwargs) if cache is not None else b""
+        if cache is not None and (rows := cache.get(key)) is not None:
+            return page_result(rows, offset, limit)
         async with service as s:
             service_obj = getattr(s, service_attr)
             # Get the method from the instance
@@ -231,7 +312,10 @@ def wrap_service_method(
                 # mcp 2.x only forwards the message of a ToolError to the client;
                 # ValueError includes pydantic.ValidationError
                 raise ToolError(str(exc)) from exc
-        return page_result(result, offset, limit) if paged else result
+        if cache is None:
+            return result
+        cache.put(key, result)
+        return page_result(result, offset, limit)
 
     # Copy signature and docstring before registering, because mcp.tool()
     # builds the tool's input schema from them when it is applied (#10)

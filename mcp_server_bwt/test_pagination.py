@@ -8,6 +8,7 @@ from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 
 import pytest
 from bing_webmaster_tools import BingWebmasterClient
+from bing_webmaster_tools.errors import BingWebmasterError
 from bing_webmaster_tools.models.traffic_analysis import QueryStats
 from bing_webmaster_tools.services.traffic_analysis import TrafficAnalysisService
 from mcp.client.client import Client
@@ -17,15 +18,22 @@ from mcp.types import CallToolResult, TextContent
 from pydantic import BaseModel
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
+from mcp_server_bwt.tools import bing_webmaster
 from mcp_server_bwt.tools.bing_webmaster import (
+    CACHE_TTL_ENV,
+    DEFAULT_CACHE_TTL,
     DEFAULT_PAGE_SIZE,
+    MAX_CACHE_TTL,
     MAX_PAGE_SIZE,
     PAGE_SIZE_ENV,
     PAGINATION_META_KEY,
     SERVICE_CLASSES,
+    ResultCache,
     add_bing_webmaster_tools,
+    cache_key,
     page_result,
     paginate,
+    resolve_cache_ttl,
     resolve_page_size,
     returns_list,
     wrap_service_method,
@@ -361,3 +369,161 @@ def test_every_list_tool_pages_like_it_serializes(
     assert isinstance(paged, CallToolResult)
     assert paged.structured_content == unpaged.structured_content
     assert paged.content[:-1] == unpaged.content
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(None, DEFAULT_CACHE_TTL), ("", DEFAULT_CACHE_TTL), ("0", 0), (" 60 ", 60)],
+)
+def test_resolve_cache_ttl(value: str | None, expected: int) -> None:
+    """#44: the env var sets the cache TTL, 0 disables caching."""
+    environ = {} if value is None else {CACHE_TTL_ENV: value}
+    assert resolve_cache_ttl(environ) == expected
+
+
+@pytest.mark.parametrize("value", ["-1", str(MAX_CACHE_TTL + 1), "ten", "1.5"])
+def test_resolve_cache_ttl_rejects_invalid_values(value: str) -> None:
+    with pytest.raises(ValueError, match=CACHE_TTL_ENV):
+        resolve_cache_ttl({CACHE_TTL_ENV: value})
+
+
+class _Clock:
+    """A settable stand-in for `time.monotonic`."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+@pytest.fixture
+def clock(monkeypatch: pytest.MonkeyPatch) -> _Clock:
+    fake = _Clock()
+    monkeypatch.setattr(bing_webmaster.time, "monotonic", fake)
+    return fake
+
+
+def test_result_cache_hit_and_expiry(clock: _Clock) -> None:
+    cache = ResultCache(ttl=10)
+    cache.put(b"k", [1, 2])
+
+    assert cache.get(b"k") == [1, 2]
+    assert cache.get(b"other") is None
+    clock.now += 9.9
+    assert cache.get(b"k") == [1, 2]
+    clock.now += 0.1
+    assert cache.get(b"k") is None
+
+
+def test_result_cache_evicts_the_oldest_entry(clock: _Clock) -> None:
+    cache = ResultCache(ttl=10, max_entries=2)
+    for key in (b"a", b"b", b"c"):
+        cache.put(key, [key])
+
+    assert cache.get(b"a") is None
+    assert cache.get(b"b") == [b"b"]
+    assert cache.get(b"c") == [b"c"]
+
+
+def test_result_cache_ttl_zero_stores_nothing() -> None:
+    cache = ResultCache(ttl=0)
+    cache.put(b"k", [1])
+
+    assert cache.get(b"k") is None
+
+
+def test_cache_key_ignores_kwarg_order() -> None:
+    assert cache_key((), {"a": 1, "b": 2}) == cache_key((), {"b": 2, "a": 1})
+    assert cache_key((), {"a": 1}) != cache_key((), {"a": 2})
+
+
+def _counting_server(
+    monkeypatch: pytest.MonkeyPatch, ttl: str | None = None, fail: bool = False
+) -> tuple[MCPServer, list[dict[str, Any]]]:
+    """A server whose Bing client records each upstream request it answers."""
+    monkeypatch.delenv(PAGE_SIZE_ENV, raising=False)
+    if ttl is None:
+        monkeypatch.delenv(CACHE_TTL_ENV, raising=False)
+    else:
+        monkeypatch.setenv(CACHE_TTL_ENV, ttl)
+    requests: list[dict[str, Any]] = []
+    state = {"fail": fail}
+
+    async def fake_request(
+        self: BingWebmasterClient, *args: Any, **kwargs: Any
+    ) -> dict[str, Any]:
+        requests.append(kwargs)
+        if state["fail"]:
+            state["fail"] = False
+            raise BingWebmasterError("upstream unavailable")
+        return {"d": [_query_stats(i) for i in range(5)]}
+
+    monkeypatch.setattr(BingWebmasterClient, "request", fake_request)
+    mcp = MCPServer("test")
+    add_bing_webmaster_tools(mcp, BingWebmasterService("dummy"))
+    return mcp, requests
+
+
+def test_pages_of_one_query_share_one_upstream_request(
+    monkeypatch: pytest.MonkeyPatch, clock: _Clock
+) -> None:
+    """#44: later pages are sliced from the cached list, until the TTL expires."""
+    mcp, requests = _counting_server(monkeypatch)
+
+    first = _call(mcp, {"limit": 2})
+    second = _call(mcp, {"limit": 2, "offset": 2})
+    assert len(requests) == 1
+    assert second.structured_content is not None
+    assert [r["Clicks"] for r in second.structured_content["result"]] == [2, 3]
+    assert _pagination(first)["total"] == _pagination(second)["total"] == 5
+
+    clock.now += DEFAULT_CACHE_TTL - 1
+    _call(mcp, {"offset": 4})
+    assert len(requests) == 1
+    clock.now += 1
+    _call(mcp, {"offset": 4})
+    assert len(requests) == 2
+
+
+def test_different_arguments_do_not_share_an_entry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mcp, requests = _counting_server(monkeypatch)
+
+    _call(mcp, {})
+    _call(mcp, {"site_url": "https://other.example.com/"})
+    _call(mcp, {})
+
+    assert len(requests) == 2
+
+
+def test_cache_ttl_zero_always_reaches_upstream(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#44: BING_WEBMASTER_CACHE_TTL=0 keeps the uncached behavior."""
+    mcp, requests = _counting_server(monkeypatch, ttl="0")
+
+    _call(mcp, {"limit": 2})
+    _call(mcp, {"limit": 2, "offset": 2})
+
+    assert len(requests) == 2
+
+
+def test_upstream_errors_are_not_cached(monkeypatch: pytest.MonkeyPatch) -> None:
+    mcp, requests = _counting_server(monkeypatch, fail=True)
+
+    with pytest.raises(ToolError, match="upstream unavailable"):
+        _call(mcp, {})
+    result = _call(mcp, {})
+    _call(mcp, {"offset": 2})
+
+    assert len(requests) == 2
+    assert _pagination(result)["total"] == 5
+
+
+def test_invalid_cache_ttl_env_fails_registration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with pytest.raises(ValueError, match=CACHE_TTL_ENV):
+        _counting_server(monkeypatch, ttl="-5")

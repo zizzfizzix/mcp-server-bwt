@@ -9,7 +9,11 @@ from bing_webmaster_tools import BingWebmasterClient
 from bing_webmaster_tools.errors import BingWebmasterError
 from mcp.server.mcpserver.exceptions import ToolError, UnexpectedToolError
 
-from mcp_server_bwt.tools.bing_webmaster import SERVICE_CLASSES, returns_list
+from mcp_server_bwt.tools.bing_webmaster import (
+    SERVICE_CLASSES,
+    ResultCache,
+    returns_list,
+)
 
 EXPECTED_TOOL_COUNT = 62
 
@@ -20,6 +24,12 @@ SITE = {
     "IsVerified": True,
     "Url": "https://example.com/",
 }
+
+
+@pytest.fixture(autouse=True)
+def no_cached_results(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test here shares `main.mcp`, so list results must not carry over (#44)."""
+    monkeypatch.setattr(ResultCache, "get", lambda self, key: None)
 
 
 def test_server_imports_and_lists_all_tools(monkeypatch: pytest.MonkeyPatch) -> None:
