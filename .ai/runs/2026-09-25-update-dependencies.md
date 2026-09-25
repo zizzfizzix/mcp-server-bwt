@@ -57,4 +57,4 @@ Inventory taken 2026-09-25 against PyPI, GitHub releases and endoflife.date:
 
 ### Phase 3: CI actions
 
-- [ ] 3.1 Bump release-please-action to v5
+- [x] 3.1 Bump release-please-action to v5 — 39998ac
