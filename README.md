@@ -1,5 +1,8 @@
 # mcp-server-bwt
 
+[![PyPI](https://img.shields.io/pypi/v/mcp-server-bwt)](https://pypi.org/project/mcp-server-bwt/)
+[![Python](https://img.shields.io/pypi/pyversions/mcp-server-bwt)](https://pypi.org/project/mcp-server-bwt/)
+
 > MCP server for Bing Webmaster Tools
 
 This MCP ([Model Context Protocol](https://modelcontextprotocol.io/introduction)) server provides a bridge between [supported AI assistants](https://modelcontextprotocol.io/clients) like Claude or Cursor and the Bing Webmaster Tools API. It exposes all Bing Webmaster Tools functionality available via [`bing-webmaster-tools`](https://github.com/merj/bing-webmaster-tools) as MCP tools that can be used by AI assistants to interact with your Bing Webmaster Tools account.
@@ -18,17 +21,14 @@ Claude will use the appropriate MCP tools to fulfill your requests.
 
 ## Requirements
 
-- [Python](https://www.python.org) >= 3.13
-- [Nodejs](https://nodejs.org)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), which provides `uvx` and downloads a suitable Python for you
 - [Bing Webmaster Tools API Key](https://learn.microsoft.com/en-us/bingwebmaster/getting-access#using-api-key)
 
 ## Installation
 
-### Using uvx (recommended)
+`mcp-server-bwt` is published on [PyPI](https://pypi.org/project/mcp-server-bwt/). Your MCP client runs it with [`uvx`](https://docs.astral.sh/uv/guides/tools/), so you don't need a separate install step. Every config below passes your API key through `BING_WEBMASTER_API_KEY`.
 
-When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installation is needed. We will use it to directly run `mcp-server-bwt` from the client app.
-
-#### Add to Claude desktop with uvx
+### Claude Desktop
 
 [In your Claude config](https://modelcontextprotocol.io/quickstart/user#2-add-the-filesystem-mcp-server) specify:
 
@@ -36,11 +36,7 @@ When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installa
 "mcpServers": {
   "mcp_server_bwt": {
     "command": "uvx",
-    "args": [
-      "--from",
-      "git+https://github.com/zizzfizzix/mcp-server-bwt",
-      "mcp-server-bwt"
-    ],
+    "args": ["mcp-server-bwt"],
     "env": {
       "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
     }
@@ -48,7 +44,29 @@ When using [`uvx`](https://docs.astral.sh/uv/guides/tools/) no specific installa
 }
 ```
 
-#### Add to Zed with uvx
+### Claude Code
+
+```bash
+claude mcp add bwt -e BING_WEBMASTER_API_KEY=YOUR_API_KEY_HERE -- uvx mcp-server-bwt
+```
+
+### Cursor
+
+In `.cursor/mcp.json` (per project) or `~/.cursor/mcp.json` (global) add:
+
+```json
+"mcpServers": {
+  "bwt": {
+    "command": "uvx",
+    "args": ["mcp-server-bwt"],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
+  }
+}
+```
+
+### Zed
 
 In your Zed settings.json add:
 
@@ -56,11 +74,7 @@ In your Zed settings.json add:
 "context_servers": {
   "bwtServer": {
     "command": "uvx",
-    "args": [
-      "--from",
-      "git+https://github.com/zizzfizzix/mcp-server-bwt",
-      "mcp-server-bwt"
-    ],
+    "args": ["mcp-server-bwt"],
     "env": {
       "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
     }
@@ -68,54 +82,9 @@ In your Zed settings.json add:
 }
 ```
 
-### Using make
+### Versions and upgrades
 
-Alternatively you can install `mcp_server_bwt` using make:
-
-```bash
-make install
-```
-
-#### Add to Claude desktop with make
-
-[In your Claude config](https://modelcontextprotocol.io/quickstart/user#2-add-the-filesystem-mcp-server) specify:
-
-```json
-"mcpServers": {
-  "bwtServer": {
-    "command": "/PATH/TO/mcp-server-bwt/.venv/bin/python",
-    "args": ["/PATH/TO/mcp-server-bwt/mcp_server_bwt/main.py"],
-    "env": {
-      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
-    }
-  }
-}
-```
-
-#### Add to Zed with make
-
-In your Zed settings.json add:
-
-```json
-"context_servers": {
-  "bwtServer": {
-    "command": "/PATH/TO/mcp-server-bwt/.venv/bin/python",
-    "args": ["/PATH/TO/mcp-server-bwt/mcp_server_bwt/main.py"],
-    "env": {
-      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
-    }
-  }
-}
-```
-
-## Development
-
-`make install` installs the dependencies and the git hooks in `lefthook.yml`:
-
-- **pre-commit** runs `ruff check --fix` and `ruff format` on your staged `*.py` files. Fixes are staged into the same commit. The commit fails only on findings ruff can't fix.
-- **pre-push** runs `mypy --strict`. It also runs `uv lock --check` when the push includes `pyproject.toml` or `uv.lock`.
-
-To skip the hooks once, use `git commit --no-verify` or `git push --no-verify`, or set `LEFTHOOK=0`.
+`uvx` caches the version it downloaded first and keeps reusing it. To pick up a new release, use `"args": ["mcp-server-bwt@latest"]`, or run `uv cache clean mcp-server-bwt` once. To pin a version, use `"args": ["mcp-server-bwt@0.2.0"]`. Release notes are in [CHANGELOG.md](https://github.com/zizzfizzix/mcp-server-bwt/blob/main/CHANGELOG.md).
 
 ## Available Tools
 
@@ -215,10 +184,19 @@ The server provides the following Bing Webmaster Tools API functionality (more i
 
 ## Development
 
+Development needs [Python](https://www.python.org) >= 3.13 and [uv](https://docs.astral.sh/uv/). [Node.js](https://nodejs.org) is only needed for `make mcp_inspector`.
+
+`make install` installs the dependencies and the git hooks in `lefthook.yml`:
+
+- **pre-commit** runs `ruff check --fix` and `ruff format` on your staged `*.py` files. Fixes are staged into the same commit. The commit fails only on findings ruff can't fix.
+- **pre-push** runs `mypy --strict`, plus the test suite when the push includes `*.py` files and `uv lock --check` when it includes `pyproject.toml` or `uv.lock`.
+
+To skip the hooks once, use `git commit --no-verify` or `git push --no-verify`, or set `LEFTHOOK=0`.
+
 To run all tests:
 
 ```bash
-make test
+BING_WEBMASTER_API_KEY=dummy make test
 ```
 
 To build the app:
@@ -237,6 +215,38 @@ To format the project:
 
 ```bash
 make format
+```
+
+### Running from a local checkout
+
+To try your changes in a client, point it at the checkout's virtualenv after `make install`. This is for contributors only. Users should install from PyPI as shown above.
+
+Claude Desktop:
+
+```json
+"mcpServers": {
+  "bwtServer": {
+    "command": "/PATH/TO/mcp-server-bwt/.venv/bin/python",
+    "args": ["/PATH/TO/mcp-server-bwt/mcp_server_bwt/main.py"],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
+  }
+}
+```
+
+Zed:
+
+```json
+"context_servers": {
+  "bwtServer": {
+    "command": "/PATH/TO/mcp-server-bwt/.venv/bin/python",
+    "args": ["/PATH/TO/mcp-server-bwt/mcp_server_bwt/main.py"],
+    "env": {
+      "BING_WEBMASTER_API_KEY": "YOUR_API_KEY_HERE"
+    }
+  }
+}
 ```
 
 ### Environment Variables
