@@ -1,0 +1,32 @@
+# Execution plan: cache list tool results between pages
+
+Source doc: .ai/specs/2026-09-25-list-result-cache.md (spec PR #45)
+Issue: #44
+
+## Goal
+
+List tools keep their upstream result in memory for `BING_WEBMASTER_CACHE_TTL` seconds (default 300, `0` disables). Later pages of the same query are sliced from memory instead of being downloaded again.
+
+## Scope
+
+- `mcp_server_bwt/tools/bing_webmaster.py`: TTL resolver, `ResultCache`, cache key, and the wrapper lookup/store.
+- `mcp_server_bwt/test_pagination.py`: cache tests.
+- Docs: `README.md` (env var, staleness), `BACKWARD_COMPATIBILITY.md` §4, and the `AGENTS.md` tool row.
+
+**Non-goals:** caching single-object or write tools, persistent or shared caches, invalidation after writes, a per-call bypass parameter, request coalescing.
+
+## Risks
+
+- Staleness is up to one TTL, including right after a write tool changes the data. The README documents it.
+- The cache is created per registered tool, so tests that build fresh servers stay isolated.
+
+## Progress
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
+
+### Phase 1: TTL cache for list tools
+
+- [ ] 1.1 Cache TTL setting
+- [ ] 1.2 ResultCache and cache key
+- [ ] 1.3 Wire the cache into list tool wrappers
+- [ ] 1.4 Docs: README, BACKWARD_COMPATIBILITY.md, AGENTS.md
