@@ -22,11 +22,13 @@ List tools keep their upstream result in memory for `BING_WEBMASTER_CACHE_TTL` s
 
 ## Progress
 
+PR: #46
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: TTL cache for list tools
 
-- [ ] 1.1 Cache TTL setting
-- [ ] 1.2 ResultCache and cache key
-- [ ] 1.3 Wire the cache into list tool wrappers
-- [ ] 1.4 Docs: README, BACKWARD_COMPATIBILITY.md, AGENTS.md
+- [x] 1.1 Cache TTL setting — 4d867fe
+- [x] 1.2 ResultCache and cache key — 4d867fe
+- [x] 1.3 Wire the cache into list tool wrappers — 4d867fe (test_startup.py disables cache hits because its tests share main.mcp)
+- [x] 1.4 Docs: README, BACKWARD_COMPATIBILITY.md, AGENTS.md — c068152
