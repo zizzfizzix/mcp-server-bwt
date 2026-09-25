@@ -3,20 +3,103 @@ name: release-please
 on:
   push:
     branches: [main]
+  # Backfill or retry: build and publish an existing release tag, for example after a
+  # failed upload or for a tag created before publishing existed.
+  # gh workflow run release-please.yml -f tag=vX.Y.Z
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish to PyPI (for example v0.2.0)
+        required: true
+        type: string
 
-permissions:
-  contents: write
-  pull-requests: write
+# Each job grants itself only what it needs. id-token: write lives in `publish` alone.
+permissions: {}
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      # The manifest package is ".", so v4 emits these without a "<path>--" prefix.
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       # Set the RELEASE_PLEASE_TOKEN secret (fine-grained PAT or GitHub App token) once
       # required checks exist on main: PRs opened with the default token do not trigger
       # other workflows, so their checks would never run.
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  build:
+    needs: release-please
+    # always() keeps the dispatch path alive when release-please was skipped.
+    if: >-
+      always()
+      && (needs.release-please.outputs.release_created == 'true'
+      || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Check tag format
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' is not a release tag (expected vX.Y.Z)"
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          persist-credentials: false
+      # setup-uv publishes no floating major tags, so pin the release commit (same as ci.yml).
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv build
+      # Refuse to publish artifacts whose version doesn't match the tag.
+      - name: Check built version matches the tag
+        run: |
+          VERSION="${TAG#v}"
+          ls dist/
+          for f in "dist/mcp_server_bwt-${VERSION}-py3-none-any.whl" "dist/mcp_server_bwt-${VERSION}.tar.gz"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::expected $f; the built version doesn't match tag $TAG"
+              exit 1
+            fi
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    # The implicit success() also looks at release-please, which is skipped on
+    # workflow_dispatch, so gate on build explicitly or the backfill never uploads.
+    if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # PyPI's Trusted Publisher is bound to this repo, this workflow file and this
+    # environment. The environment only allows deployments from main.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mcp-server-bwt
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      # Trusted Publishing (OIDC) and PEP 740 attestations are the action's defaults.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

@@ -36,6 +36,8 @@ After merge, this process stops. Deployment, smoke tests, monitoring, and rollba
 
 Releases are cut by [release-please](https://github.com/googleapis/release-please-action). After every push to `main` it opens or updates one `chore(main): release X.Y.Z` PR from the Conventional Commit titles merged since the last tag. Merging that PR is how a release is made: it bumps `mcp_server_bwt/version.py`, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub release. The Maintainer decides when to merge it. PR titles therefore matter: `fix:` releases a patch, `feat:` a minor, a breaking change (`!` or `BREAKING CHANGE:`) a minor while pre-1.0, and `chore:`/`docs:`/`refactor:` release nothing on their own. `om-auto-update-changelog` is still available for ad-hoc notes, but `CHANGELOG.md` is generated.
 
+The same run publishes the release to [PyPI](https://pypi.org/p/mcp-server-bwt). When release-please reports a new release, the `build` job in `.github/workflows/release-please.yml` builds the tag and checks that the built version matches it. The `publish` job then uploads the sdist and wheel through PyPI Trusted Publishing, in the `pypi` environment (deployments from `main` only). No PyPI token is stored anywhere. If the upload fails, re-run the failed jobs on that workflow run, or publish the existing tag with `gh workflow run release-please.yml -f tag=vX.Y.Z` (run it from `main`, since the environment rejects other refs). PyPI versions are immutable. A bad release is **yanked** on PyPI, never deleted or re-uploaded, and fixed forward with a new patch release.
+
 ## Label state machine
 
 Pipeline labels are mutually exclusive: a PR carries at most one, and it names where the PR sits in the flow.

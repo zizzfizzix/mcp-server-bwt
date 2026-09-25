@@ -2,7 +2,7 @@
 
 `mcp-server-bwt` is consumed by MCP clients (Claude Desktop, Zed, Cursor, …) that users configure by hand and that AI assistants drive by tool name. The surfaces below are protected contracts. Review skills check every change against this file, and implementation skills warn when a change breaks one.
 
-The project is pre-1.0, but users run it via `uvx mcp-server-bwt`, which picks up new releases without any action on their side. Breaking changes therefore still need the paths below. Versions are cut by release-please (see `SDLC.md`, *Releasing*). Where a path below asks for a minor version bump, mark the PR title breaking (`feat!:` / `fix!:`, or a `BREAKING CHANGE:` footer), which makes release-please bump the minor version while pre-1.0. Never edit `mcp_server_bwt/version.py` by hand.
+The project is pre-1.0, but users run released versions from [PyPI](https://pypi.org/p/mcp-server-bwt) via `uvx mcp-server-bwt`. uvx resolves the newest release on a cold cache or with `mcp-server-bwt@latest`, so users can pick up a breaking release without editing their config. A version on PyPI can't be replaced, only yanked, so a breaking change that has shipped can't be recalled. Breaking changes therefore still need the paths below. Versions are cut by release-please (see `SDLC.md`, *Releasing*). Where a path below asks for a minor version bump, mark the PR title breaking (`feat!:` / `fix!:`, or a `BREAKING CHANGE:` footer), which makes release-please bump the minor version while pre-1.0. Never edit `mcp_server_bwt/version.py` by hand.
 
 ## Protected surfaces
 
@@ -26,7 +26,7 @@ Parameter names, types, required-ness and defaults for each tool. These come fro
 
 `[project.scripts] mcp-server-bwt = "mcp_server_bwt.main:app"`, the stdio transport, and the `python mcp_server_bwt/main.py` path documented in the README for venv setups.
 
-- **Breaking:** renaming the script or the `mcp_server_bwt.main:app` target; changing the default transport away from stdio; moving `main.py`; raising `requires-python` (currently `>=3.13`).
+- **Breaking:** renaming the script or the `mcp_server_bwt.main:app` target; changing the default transport away from stdio; moving `main.py`; raising `requires-python` (currently `>=3.13`). Raising `requires-python` also changes what the resolver picks: users on an older Python silently stay on the last compatible release.
 - **Required path:** a README migration note with before and after client config, plus a minor version bump. Keep the old entry point working for one minor release where possible.
 
 ### 4. Environment configuration
@@ -46,7 +46,7 @@ The API client settings in `BingWebmasterService.__init__`: `disable_destructive
 
 ### 6. Package identity
 
-The distribution name `mcp-server-bwt` and the import package `mcp_server_bwt`.
+The distribution name `mcp-server-bwt` (the PyPI project [`mcp-server-bwt`](https://pypi.org/p/mcp-server-bwt)) and the import package `mcp_server_bwt`.
 
 - **Breaking:** renaming either one.
 - **Required path:** avoid. If it's unavoidable, publish under both names for a transition period and document the change in the README.
