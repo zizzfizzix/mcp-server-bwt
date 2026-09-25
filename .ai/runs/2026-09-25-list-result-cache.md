@@ -32,3 +32,4 @@ PR: #46
 - [x] 1.2 ResultCache and cache key — 4d867fe
 - [x] 1.3 Wire the cache into list tool wrappers — 4d867fe (test_startup.py disables cache hits because its tests share main.mcp)
 - [x] 1.4 Docs: README, BACKWARD_COMPATIBILITY.md, AGENTS.md — c068152
+- [x] Post-review fix: non-string cache key test, §4 exception note, README cache wording — df69635
