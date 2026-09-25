@@ -84,6 +84,9 @@ jobs:
 
   publish:
     needs: build
+    # The implicit success() also looks at release-please, which is skipped on
+    # workflow_dispatch, so gate on build explicitly or the backfill never uploads.
+    if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # PyPI's Trusted Publisher is bound to this repo, this workflow file and this
