@@ -99,6 +99,8 @@ Tools that return a list (for example `get_query_stats`, `get_page_stats` and `g
 
 Each paged result ends with a line such as `Showing 50 of 1200 rows from offset 0; next_offset=50`. The same values are in the result's `_meta` under `mcp-server-bwt/pagination` (`total`, `offset`, `limit`, `next_offset`). To get the next page, call again with `offset` set to `next_offset`.
 
+The server keeps each list it downloads for 5 minutes (see `BING_WEBMASTER_CACHE_TTL` below). Later pages of the same query are served from that copy instead of downloading the whole list again. So a list can be up to 5 minutes old, even right after a tool such as `add_blocked_url` changes it.
+
 > **Migrating from 0.1.x:** list tools used to return every row. To get that behavior back, set `BING_WEBMASTER_PAGE_SIZE=0` in the server's `env`.
 
 ### Site Management
@@ -269,6 +271,7 @@ The following environment variables are required:
 Optional:
 
 - `BING_WEBMASTER_PAGE_SIZE`: default number of rows list tools return per call (1–500, default 50). `0` turns paging off: list tools return every row with no summary line, unless a caller passes `limit` or `offset`, and the 500 cap is lifted. The server doesn't start if the value is invalid.
+- `BING_WEBMASTER_CACHE_TTL`: seconds a list tool keeps a downloaded list for later calls with the same arguments (0–86400, default 300). Results can be this many seconds stale, including after a write tool changes the data. `0` turns caching off, so every call reaches the Bing API. The server doesn't start if the value is invalid.
 
 ### Starting the Server
 
