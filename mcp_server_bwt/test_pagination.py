@@ -9,6 +9,7 @@ from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 import pytest
 from bing_webmaster_tools import BingWebmasterClient
 from bing_webmaster_tools.errors import BingWebmasterError
+from bing_webmaster_tools.models.content_management import UrlInfo
 from bing_webmaster_tools.models.traffic_analysis import QueryStats
 from bing_webmaster_tools.services.traffic_analysis import TrafficAnalysisService
 from mcp.client.client import Client
@@ -457,6 +458,8 @@ def _counting_server(
         if state["fail"]:
             state["fail"] = False
             raise BingWebmasterError("upstream unavailable")
+        if args[1] == "GetChildrenUrlInfo":
+            return {"d": [_raw_row(UrlInfo)]}
         return {"d": [_query_stats(i) for i in range(5)]}
 
     monkeypatch.setattr(BingWebmasterClient, "request", fake_request)
@@ -496,6 +499,28 @@ def test_different_arguments_do_not_share_an_entry(
     _call(mcp, {})
 
     assert len(requests) == 2
+
+
+def test_non_string_arguments_are_part_of_the_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#44: the upstream `page` index and filter models select separate entries."""
+    mcp, requests = _counting_server(monkeypatch)
+    base = {"site_url": "https://example.com/", "url": "https://example.com/a"}
+    calls = [
+        base,
+        base | {"page": 1},
+        base | {"filter_properties": {"CrawlDateFilter": 1}},
+        base,
+        base | {"page": 1},
+    ]
+
+    for arguments in calls:
+        result = asyncio.run(mcp.call_tool("get_children_url_info", arguments))
+        assert isinstance(result, CallToolResult)
+        assert not result.is_error
+
+    assert len(requests) == 3
 
 
 def test_cache_ttl_zero_always_reaches_upstream(

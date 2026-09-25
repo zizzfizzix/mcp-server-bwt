@@ -31,10 +31,10 @@ Parameter names, types, required-ness and defaults for each tool. These come fro
 
 ### 4. Environment configuration
 
-`BING_WEBMASTER_API_KEY` (required; the server refuses to start without it) and `BING_WEBMASTER_PAGE_SIZE` (optional; the default page size for list tools, `0` disables paging, and an invalid value stops the server from starting), and `BING_WEBMASTER_CACHE_TTL` (optional; how many seconds list tool results are cached, default 300, `0` disables caching, and an invalid value stops the server from starting).
+`BING_WEBMASTER_API_KEY` (required; the server refuses to start without it), `BING_WEBMASTER_PAGE_SIZE` (optional; the default page size for list tools, `0` disables paging, and an invalid value stops the server from starting), and `BING_WEBMASTER_CACHE_TTL` (optional; how many seconds list tool results are cached, default 300, `0` disables caching, and an invalid value stops the server from starting).
 
 - **Breaking:** renaming or removing it; adding a new *required* variable.
-- **Non-breaking:** new optional variables with defaults that keep current behavior.
+- **Non-breaking:** new optional variables with defaults that keep current behavior. `BING_WEBMASTER_CACHE_TTL` is an accepted exception (#44): its default changes only how fresh results are, not their inputs or shape, and `0` restores the previous behavior.
 - **Required path:** accept the old variable name alongside the new one for at least one minor release, and document both in the README.
 
 ### 5. Client behavior settings
