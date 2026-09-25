@@ -90,6 +90,17 @@ In your Zed settings.json add:
 
 The server provides the following Bing Webmaster Tools API functionality (more info in the [API docs](https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces?view=bing-webmaster-dotnet)):
 
+### Paged results
+
+Tools that return a list (for example `get_query_stats`, `get_page_stats` and `get_crawl_issues`) return at most 50 rows per call, so a large site's history doesn't overflow the client's context window. They take two optional parameters:
+
+- `limit`: rows per call (1–500, default 50; see `BING_WEBMASTER_PAGE_SIZE` below)
+- `offset`: index of the first row (default 0)
+
+Each paged result ends with a line such as `Showing 50 of 1200 rows from offset 0; next_offset=50`. The same values are in the result's `_meta` under `mcp-server-bwt/pagination` (`total`, `offset`, `limit`, `next_offset`). To get the next page, call again with `offset` set to `next_offset`.
+
+> **Migrating from 0.1.x:** list tools used to return every row. To get that behavior back, set `BING_WEBMASTER_PAGE_SIZE=0` in the server's `env`.
+
 ### Site Management
 
 - `get_sites`: List all verified sites in your Bing Webmaster Tools account
@@ -254,6 +265,10 @@ Zed:
 The following environment variables are required:
 
 - `BING_WEBMASTER_API_KEY`: Your Bing Webmaster Tools API key
+
+Optional:
+
+- `BING_WEBMASTER_PAGE_SIZE`: default number of rows list tools return per call (1–500, default 50). `0` turns paging off: list tools return every row with no summary line, unless a caller passes `limit` or `offset`, and the 500 cap is lifted. The server doesn't start if the value is invalid.
 
 ### Starting the Server
 

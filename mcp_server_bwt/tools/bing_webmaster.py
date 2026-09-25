@@ -1,8 +1,10 @@
 import inspect
-from collections.abc import Callable
+import os
+from collections.abc import Callable, Mapping, Sequence
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Annotated, Any, TypeVar, get_origin, get_type_hints
 
+import pydantic_core
 from bing_webmaster_tools.errors import BingWebmasterError
 from bing_webmaster_tools.services import (
     content_blocking,
@@ -18,10 +20,144 @@ from bing_webmaster_tools.services import (
 )
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.types import CallToolResult, ContentBlock, TextContent
+from pydantic import Field, TypeAdapter
 
 from mcp_server_bwt.services.bing_webmaster import BingWebmasterService
 
 T = TypeVar("T")
+
+# Pagination of list results (#39): tools returning a list are sliced locally,
+# because the upstream API returns every row in one response
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 500
+PAGE_SIZE_ENV = "BING_WEBMASTER_PAGE_SIZE"
+PAGINATION_META_KEY = "mcp-server-bwt/pagination"
+
+
+def resolve_page_size(environ: Mapping[str, str] = os.environ) -> int | None:
+    """Return the default `limit` for list tools, or None when paging is disabled.
+
+    >>> resolve_page_size({})
+    50
+    >>> resolve_page_size({"BING_WEBMASTER_PAGE_SIZE": "0"}) is None
+    True
+    >>> resolve_page_size({"BING_WEBMASTER_PAGE_SIZE": "200"})
+    200
+    """
+    raw = environ.get(PAGE_SIZE_ENV, "").strip()
+    if not raw:
+        return DEFAULT_PAGE_SIZE
+    try:
+        value = int(raw)
+    except ValueError:
+        value = -1
+    if not 0 <= value <= MAX_PAGE_SIZE:
+        raise ValueError(
+            f"{PAGE_SIZE_ENV} must be an integer between 0 and {MAX_PAGE_SIZE}"
+        )
+    return value or None
+
+
+def paginate[R](
+    rows: Sequence[R], offset: int, limit: int | None
+) -> tuple[list[R], int, int | None]:
+    """Slice `rows` and return (page, total, next_offset).
+
+    `next_offset` is None once the page reaches the end of `rows`.
+
+    >>> paginate([1, 2, 3, 4, 5], 0, 2)
+    ([1, 2], 5, 2)
+    >>> paginate([1, 2, 3, 4, 5], 4, 2)
+    ([5], 5, None)
+    >>> paginate([1, 2, 3], 7, 2)
+    ([], 3, None)
+    """
+    total = len(rows)
+    stop = total if limit is None else offset + limit
+    page = list(rows[offset:stop])
+    end = offset + len(page)
+    return page, total, end if page and end < total else None
+
+
+PAGINATION_DOC = """
+
+Returns at most `limit` rows (default {default}{cap}). When the result reports
+a `next_offset`, call again with `offset=next_offset` to get more rows."""
+
+_ROWS_ADAPTER: TypeAdapter[list[Any]] = TypeAdapter(list[Any])
+
+
+def returns_list(method: Callable[..., Any]) -> bool:
+    """Whether an upstream service method is annotated to return a list."""
+    return get_origin(get_type_hints(method).get("return")) is list
+
+
+def pagination_parameters(page_size: int | None) -> list[inspect.Parameter]:
+    """The `offset` and `limit` parameters appended to every list tool."""
+    offset = inspect.Parameter(
+        "offset",
+        inspect.Parameter.KEYWORD_ONLY,
+        default=0,
+        annotation=Annotated[int, Field(ge=0, description="Index of the first row.")],
+    )
+    limit_description = "Maximum number of rows to return."
+    if page_size is None:
+        limit_annotation: Any = Annotated[
+            int | None, Field(ge=1, description=limit_description)
+        ]
+    else:
+        limit_annotation = Annotated[
+            int, Field(ge=1, le=MAX_PAGE_SIZE, description=limit_description)
+        ]
+    limit = inspect.Parameter(
+        "limit",
+        inspect.Parameter.KEYWORD_ONLY,
+        default=page_size,
+        annotation=limit_annotation,
+    )
+    return [offset, limit]
+
+
+def page_result(
+    rows: Sequence[Any], offset: int, limit: int | None
+) -> list[Any] | CallToolResult:
+    """Build a list tool's result for the requested page.
+
+    Without paging in effect the upstream list is returned as is, so mcp
+    serializes it exactly as before. Otherwise the result keeps the
+    `{"result": [...]}` output schema and reports the paging state in `_meta`
+    and in a trailing text block.
+    """
+    if limit is None and offset == 0:
+        return list(rows)
+    page, total, next_offset = paginate(rows, offset, limit)
+    status = f"next_offset={next_offset}" if next_offset is not None else "last page"
+    summary = f"Showing {len(page)} of {total} rows from offset {offset}; {status}"
+    # Serialize rows the way mcp does for a returned list (one block per row)
+    content: list[ContentBlock] = [
+        TextContent(
+            type="text",
+            text=pydantic_core.to_json(row, fallback=str, indent=2).decode(),
+        )
+        for row in page
+    ]
+    content.append(TextContent(type="text", text=summary))
+    return CallToolResult(
+        content=content,
+        structured_content={
+            "result": _ROWS_ADAPTER.dump_python(page, mode="json", by_alias=True)
+        },
+        _meta={
+            PAGINATION_META_KEY: {
+                "total": total,
+                "offset": offset,
+                "limit": limit,
+                "next_offset": next_offset,
+            }
+        },
+    )
+
 
 # Map service attribute names to their corresponding service classes
 SERVICE_CLASSES = {
@@ -61,28 +197,46 @@ def wrap_service_method(
     # Remove 'self' parameter from signature
     parameters = list(sig.parameters.values())[1:]  # Skip 'self'
 
+    paged = returns_list(original_method)
+    page_size = resolve_page_size() if paged else None
+    doc = original_method.__doc__
+    if paged:
+        collisions = {"offset", "limit"} & {p.name for p in parameters}
+        if collisions:
+            raise ValueError(
+                f"{method_name} already has parameter(s) {sorted(collisions)}, "
+                "which clash with pagination"
+            )
+        parameters += pagination_parameters(page_size)
+        cap = "" if page_size is None else f", max {MAX_PAGE_SIZE}"
+        default = "all rows" if page_size is None else str(page_size)
+        doc = (doc or "").rstrip() + PAGINATION_DOC.format(default=default, cap=cap)
+
     # Create new signature without 'self'
     new_sig = sig.replace(parameters=parameters)
 
     # Create wrapper function with same signature
     @wraps(original_method)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        offset: int = kwargs.pop("offset", 0) if paged else 0
+        limit: int | None = kwargs.pop("limit", page_size) if paged else None
         async with service as s:
             service_obj = getattr(s, service_attr)
             # Get the method from the instance
             method = getattr(service_obj, method_name)
             # Call the method directly - it's already bound to the instance
             try:
-                return await method(*args, **kwargs)
+                result = await method(*args, **kwargs)
             except (BingWebmasterError, ValueError) as exc:
                 # mcp 2.x only forwards the message of a ToolError to the client;
                 # ValueError includes pydantic.ValidationError
                 raise ToolError(str(exc)) from exc
+        return page_result(result, offset, limit) if paged else result
 
     # Copy signature and docstring before registering, because mcp.tool()
     # builds the tool's input schema from them when it is applied (#10)
     wrapper.__signature__ = new_sig  # type: ignore
-    wrapper.__doc__ = original_method.__doc__
+    wrapper.__doc__ = doc
 
     mcp.tool()(wrapper)
 

@@ -16,7 +16,7 @@ The 62 tools registered in `mcp_server_bwt/tools/bing_webmaster.py` (listed in t
 
 ### 2. Tool input schemas and results
 
-Parameter names, types, required-ness and defaults for each tool. These come from the upstream `bing-webmaster-tools` method signature, minus `self`. Result shapes are whatever the upstream method returns.
+Parameter names, types, required-ness and defaults for each tool. These come from the upstream `bing-webmaster-tools` method signature, minus `self`, plus the `offset`/`limit` paging parameters on every tool whose upstream method returns a list (#39). Result shapes are whatever the upstream method returns. For list tools, `result` holds the requested page and the paging state is reported in `_meta` under `mcp-server-bwt/pagination`, which is also protected. The default page size (50) and cap (500) count as defaults.
 
 - **Breaking:** removing or renaming a parameter; making an optional parameter required; changing a type incompatibly; changing a result shape. This includes changes that arrive via an upstream `bing-webmaster-tools` upgrade.
 - **Non-breaking:** new optional parameters; docstring and description improvements.
@@ -31,7 +31,7 @@ Parameter names, types, required-ness and defaults for each tool. These come fro
 
 ### 4. Environment configuration
 
-`BING_WEBMASTER_API_KEY` (required; the server refuses to start without it).
+`BING_WEBMASTER_API_KEY` (required; the server refuses to start without it) and `BING_WEBMASTER_PAGE_SIZE` (optional; the default page size for list tools, `0` disables paging, and an invalid value stops the server from starting).
 
 - **Breaking:** renaming or removing it; adding a new *required* variable.
 - **Non-breaking:** new optional variables with defaults that keep current behavior.
