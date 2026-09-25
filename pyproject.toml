@@ -9,19 +9,31 @@ authors = [
 ]
 description = "MCP server for Bing Webmaster Tools"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dynamic = ["version"]
+keywords = ["mcp", "model-context-protocol", "bing", "bing-webmaster-tools", "seo"]
 
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
 ]
 
 dependencies = [
     "mcp[cli]>=2.2,<3",
     "bing-webmaster-tools"
 ]
+
+[project.urls]
+Homepage = "https://github.com/zizzfizzix/mcp-server-bwt"
+Repository = "https://github.com/zizzfizzix/mcp-server-bwt"
+Issues = "https://github.com/zizzfizzix/mcp-server-bwt/issues"
+Changelog = "https://github.com/zizzfizzix/mcp-server-bwt/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
